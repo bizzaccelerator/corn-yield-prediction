@@ -5,3 +5,4 @@ This fictional project was developed as a midterm project for the Machine Learni
 The current project simulates a real escenario of information gathering for proper political decision making in a mayor's office of Kenia. 
 
 
+The data used in this project was obtained for free from kagle [here](https://www.kaggle.com/datasets/japondo/corn-farming-data). However, a copy of the referred data is added to this repository for convenience. 
