@@ -17,7 +17,7 @@ Certain region in Kenya has experienced rapid population growth over the past de
 As a Machine Learning engineer, I am tasked with building a model that not only predicts the amount of corn produced in that county in Kenya but also helps decision makers at the mayor's office organize resources for optimized corn production. To achieve this goal, the model construction explores data that was collected from various plantations, identifying several useful variables such as the gender of the plantation leader, the size of the household, and the amount of fertilizer used in corn production, among others. This model is implemented in a cloud solution that serves the model for future use and insights extraction, enhancing its reliability, readability, and security.
 
 ## Solution proposed
-The engineering solution proposed was built over a `model` with a reliabity of ... This model was selected after performing a profound Exploratory Data Analysis (EDA) where missing values, univariate distribuitions and feature importance analysis were made. Extensive EDA can be found [here](C:\Users\jober\Data_Projects\corn-yield-prediction\corn_data.ipynb).
+The engineering solution proposed was built over a `model` with a reliabity of ... This model was selected after performing a profound Exploratory Data Analysis (EDA) where missing values, univariate distribuitions and feature importance analysis were made. Extensive EDA can be found [here](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/notebook.ipynb).
 
 evaluating  
 
