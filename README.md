@@ -22,3 +22,5 @@ The engineering solution proposed was built over a `model` with a reliabity of .
 evaluating  
 
 The data used in this project was obtained for free from kagle [here](https://www.kaggle.com/datasets/japondo/corn-farming-data). However, a copy of the referred data is added to this repository for convenience. 
+
+## How to run the project.
