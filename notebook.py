@@ -4,7 +4,7 @@
 # # Data Exploratory Analysis
 # The following outlines the process I used to understand and analyze the dataset.
 
-# In[1]:
+# In[2]:
 
 
 # The first step involves importing the libraries required for the process:
@@ -28,15 +28,18 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.model_selection import GridSearchCV
 
+# To save the model
+import pickle
 
-# In[2]:
+
+# In[3]:
 
 
 # The following allows us to view all the columns of the dataset, regardless of its size:
 pd.set_option('display.max_columns', None)
 
 
-# In[3]:
+# In[4]:
 
 
 # Then the dataset is loaded as:
@@ -46,39 +49,39 @@ corn = pd.read_csv("C://Users/jober/Data_Projects/corn-yield-prediction/Dataset/
 # ## Step 1: Understanding the data
 # This step give us a general sense of the dataset: 
 
-# In[4]:
+# In[5]:
 
 
 corn.shape
 
 
-# In[5]:
+# In[6]:
 
 
 corn.head()
 
 
-# In[6]:
+# In[7]:
 
 
 corn.columns
 
 
-# In[7]:
+# In[8]:
 
 
 # Using the info() method, we can quickly identify the data type of each column and detect null values:"
 corn.info()
 
 
-# In[8]:
+# In[9]:
 
 
 # The number of null values in the dataset is confirmed as:
 corn.isna().sum()
 
 
-# In[9]:
+# In[10]:
 
 
 # The describe() function provides basic statistics for the numerical variables in the dataset:
@@ -88,20 +91,20 @@ corn.describe()
 # ## Step 2: Data preparation
 # Now that I have a general understanding of the data, some cleaning is needed before proceeding with further analysis.
 
-# In[10]:
+# In[11]:
 
 
 # Checking for duplicates:
 corn.duplicated().sum()
 
 
-# In[11]:
+# In[12]:
 
 
 corn.loc[corn.duplicated(subset=['Farmer'])].shape
 
 
-# In[12]:
+# In[13]:
 
 
 # The column 'Farmer' indicates a unique record for each of the 422 platantion leader's.
@@ -110,7 +113,7 @@ corn['Farmer'].value_counts()
 
 # Then there are no registries duplicated.
 
-# In[13]:
+# In[14]:
 
 
 # In addition, the following columns are not useful for creating a predictive model because they return the same value for all rows, as shown below:
@@ -119,13 +122,13 @@ for c in cols:
     print(corn[c].value_counts())
 
 
-# In[14]:
+# In[15]:
 
 
 # Additionally, the columns 'Latitude' and 'Longitude' do not provide value due to their low variance within the analyzed county.
 
 
-# In[15]:
+# In[16]:
 
 
 # Then, our subset selected for analysis is:
@@ -137,7 +140,7 @@ corn_subset = corn[['Education', 'Gender', 'Age bracket',
 corn_subset.head()
 
 
-# In[16]:
+# In[17]:
 
 
 # Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
@@ -145,27 +148,27 @@ corn_subset.columns = [name.lower() for name in corn_subset.columns]
 corn_subset.columns = [name.replace(" ","_") for name in corn_subset.columns]
 
 
-# In[17]:
+# In[18]:
 
 
 corn_subset.head()
 
 
-# In[18]:
+# In[19]:
 
 
 # Then, let's see the null values
 corn_subset.isna().sum()
 
 
-# In[19]:
+# In[20]:
 
 
 # The null values in the 'acreage' column are:
 corn_subset[corn_subset['acreage'].isna()]
 
 
-# In[20]:
+# In[21]:
 
 
 # The 71 entries lacking records of the amount of cultivated land are not useful for our objective. 
@@ -177,7 +180,7 @@ print(f'The percentage of registries with missing values of cultivated land repr
 
 # While removing a large number of missing values is generally not advisable, the lack of access to the research team for clarification and the limited usefulness of this data for our model, these rows will be removed from the dataframe.
 
-# In[21]:
+# In[22]:
 
 
 # The resulting dataframe is:
@@ -185,7 +188,7 @@ filter = corn_subset['acreage'].isna()
 corn_subset = corn_subset[~filter]
 
 
-# In[22]:
+# In[23]:
 
 
 # The null values in the 'education' columns are:
@@ -194,27 +197,27 @@ corn_subset[corn_subset['education'].isna()].shape
 
 # It makes sense that farmers in a developing country might have little to no formal education. Therefore, we can reasonably infer that many of them have not achieved any formal academic qualifications.
 
-# In[23]:
+# In[24]:
 
 
 # We populate the missing values in the education column with "No educated":
 corn_subset.loc[corn_subset['education'].isna()] = corn_subset.loc[corn_subset['education'].isna()].fillna('No educated')
 
 
-# In[24]:
+# In[25]:
 
 
 corn_subset['education'].value_counts()
 
 
-# In[25]:
+# In[26]:
 
 
 # Finally, our cleaned dataset does not contains missing values:
 corn_subset.isna().sum()
 
 
-# In[26]:
+# In[27]:
 
 
 # The main statistics for out clean dataset are:
@@ -227,7 +230,7 @@ corn_subset.describe(include='all')
 # 
 # ### Target variable (Yield):
 
-# In[27]:
+# In[28]:
 
 
 sns.histplot(
@@ -242,7 +245,7 @@ sns.histplot(
 )
 
 
-# In[28]:
+# In[29]:
 
 
 # The Central Tendency measures are
@@ -261,7 +264,7 @@ kurtosis = corn_subset['yield'].kurt()
 print(f"Skewness: {skewness}, Kurtosis: {kurtosis}")
 
 
-# In[29]:
+# In[30]:
 
 
 # The Outliers can be identifyed from a Boxplot
@@ -274,14 +277,14 @@ plt.show()
 
 # - The variable 'education':
 
-# In[30]:
+# In[31]:
 
 
 # The education variable behave as:
 sns.boxplot(x=corn_subset['education'], y=corn_subset['yield'])
 
 
-# In[31]:
+# In[32]:
 
 
 # To validate the variability in yield explained by the farmer's 'education', I'll execute a one-way anova 
@@ -299,7 +302,7 @@ print("Thats why It's important to include  this variable in the model")
 
 # - The variable 'gender':
 
-# In[32]:
+# In[33]:
 
 
 # The 'gender' variable behave as:
@@ -308,7 +311,7 @@ plt.title("Yield of corn distribution by Gender")
 plt.show()
 
 
-# In[33]:
+# In[34]:
 
 
 # Gruoping the dataframe using gender 
@@ -327,7 +330,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f'There is homogeinity of variance between genders [{p} is smaller than 0.05]')
 
 
-# In[34]:
+# In[35]:
 
 
 # Use T-test
@@ -340,7 +343,7 @@ print(f"T-statistic: {t_stat}, P-value: {t_p}")
 # 
 # - Variable 'age_braket':
 
-# In[35]:
+# In[36]:
 
 
 # The 'age_bracket' variable behave as:
@@ -349,7 +352,7 @@ plt.title("Yield of corn distribution by Age braket")
 plt.show()
 
 
-# In[36]:
+# In[37]:
 
 
 # From the illustration above, I identifyed atypical data in the '46-55' age_bracket category. Then,
@@ -370,7 +373,7 @@ def atypical_data (df, target, variable, label):
     return outliers
 
 
-# In[37]:
+# In[38]:
 
 
 # The farmers between 46 and 55 years old with atypical production of corn are: 
@@ -380,7 +383,7 @@ aty_age.head(15)
 
 # While there is one row in the yield column with 600 units, this individual appears to have greater access to resources. He cultivate four times more land than others and use fertilizer more intensively. He also uses his own financial resources for farming. It is reasonable to infer that this farmer is wealthier than their peers. I concluded that there are no illogical entries in the dataset for this variable.
 
-# In[38]:
+# In[39]:
 
 
 # The firts step is spliting the categories in the column as follows:
@@ -401,7 +404,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f'There is homogeinity of variance between age brackets [{p} is smaller than 0.05]')
 
 
-# In[39]:
+# In[40]:
 
 
 # Then a one-way ANOVA is performed using 
@@ -416,21 +419,21 @@ print("Thats why It's important to include  this variable in the model")
 # <br>
 # The values taken by the variable are:
 
-# In[40]:
+# In[41]:
 
 
 print(corn_subset['household_size'].unique())
 print('\n While those are numeric values, they are best treated as categories.')
 
 
-# In[41]:
+# In[42]:
 
 
 #Transformation of the data type in the variable 'household_size':
 corn_subset['household_size'] = corn_subset['household_size'].apply(str)
 
 
-# In[42]:
+# In[43]:
 
 
 # Now, the 'household_size' variable behave as:
@@ -439,7 +442,7 @@ plt.title("Yield of corn distribution by household size")
 plt.show()
 
 
-# In[43]:
+# In[44]:
 
 
 # As evaluated in the age_bracket variable, the are some possible outliers at second and nineth categories. Then,
@@ -447,7 +450,7 @@ aty_hs_2 = atypical_data(corn_subset, 'yield', 'household_size', '2')
 aty_hs_2
 
 
-# In[44]:
+# In[45]:
 
 
 # And also:
@@ -457,7 +460,7 @@ aty_hs_9
 
 # These are records of farmers that break the consistency of the dataframe, particularly due to the small number of laborers they use. Therefore, it is reasonable to classify them as outliers that should be removed.
 
-# In[45]:
+# In[46]:
 
 
 # Merging the 2 subsets of outliers:
@@ -467,7 +470,7 @@ aty_hs_merged
 corn_subset = corn_subset.drop(aty_hs_merged.index)
 
 
-# In[46]:
+# In[47]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -488,7 +491,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f'There is homogeinity of variance between household size [{p} is smaller than 0.05]')
 
 
-# In[47]:
+# In[48]:
 
 
 # Some of the household sizes does not follow a normal distribution. 
@@ -504,7 +507,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 # - Variable 'laborers':
 # 
 
-# In[48]:
+# In[49]:
 
 
 # Now, the 'laborers' variable behave as:
@@ -513,7 +516,7 @@ plt.title("Yield of corn distribution by number of laborers")
 plt.show()
 
 
-# In[49]:
+# In[50]:
 
 
 #Transformation of the data type in the variable 'laborers':
@@ -526,7 +529,7 @@ aty_lb_3
 
 # However, I have no arguments to eliminate those registries from the dataset. Therefore, I will keep it for now.
 
-# In[50]:
+# In[51]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -547,7 +550,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There isn't homogeinity of variance between number of laborers [{p} is greater than 0.05]")
 
 
-# In[51]:
+# In[52]:
 
 
 # The assumption of normally distributed data could not be proven, and there is no evidence of heteroscedasticity. 
@@ -562,7 +565,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 # 
 # - Variable 'main_credit_source': 
 
-# In[52]:
+# In[53]:
 
 
 # Now, the 'main_credit_source' variable behave as:
@@ -571,7 +574,7 @@ plt.title("Yield of corn distribution by the credit source used")
 plt.show()
 
 
-# In[53]:
+# In[54]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -592,7 +595,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There are unequal variances between credit source types because [{p} is greater than 0.05]")
 
 
-# In[54]:
+# In[55]:
 
 
 # Then, I'll apply the non-parametric alternative test for comparaison (Kruskal-Wallis Test):
@@ -605,7 +608,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 # 
 # - Variable 'farm_records':
 
-# In[55]:
+# In[56]:
 
 
 # Now, the 'farm_records' variable behave as:
@@ -614,7 +617,7 @@ plt.title("Yield of corn distribution by record")
 plt.show()
 
 
-# In[56]:
+# In[57]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -633,7 +636,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There are unequal variances between both groups because [{p} is greater than 0.05]")
 
 
-# In[57]:
+# In[58]:
 
 
 # Then, I'll apply the non-parametric alternative test for comparaison (U Mann-Withney Test):
@@ -645,7 +648,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 # 
 # - Variable 'main_advisory_source':
 
-# In[58]:
+# In[59]:
 
 
 # Now, the 'main_advisory_source' variable behave as:
@@ -654,7 +657,7 @@ plt.title("Yield of corn distribution by advisory source")
 plt.show()
 
 
-# In[59]:
+# In[60]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -675,7 +678,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There are unequal variances between different advisory groups because {p} is greater than 0.05")
 
 
-# In[60]:
+# In[61]:
 
 
 # Then, I'll apply the non-parametric alternative test for comparaison (Kruskal-Wallis Test):
@@ -688,7 +691,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 # 
 # - Variable 'extension_provider':
 
-# In[61]:
+# In[62]:
 
 
 # Now, the 'extension_provider' variable behave as:
@@ -697,14 +700,14 @@ plt.title("Yield of corn distribution by extension provider")
 plt.show()
 
 
-# In[62]:
+# In[63]:
 
 
 aty_gv = atypical_data(corn_subset, 'yield', 'extension_provider', 'National Government' )
 aty_gv
 
 
-# In[63]:
+# In[64]:
 
 
 # Dropping the outliers for extension provider
@@ -712,7 +715,7 @@ corn_subset = corn_subset.drop(aty_gv.index)
 corn_subset.shape
 
 
-# In[64]:
+# In[65]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -733,7 +736,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There are unequal variances between different extension provider because {p} is greater than 0.05")
 
 
-# In[65]:
+# In[66]:
 
 
 # Then, I'll apply the non-parametric alternative test for comparaison (Kruskal-Wallis Test):
@@ -746,7 +749,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 # 
 # - Variable 'advisory_format':
 
-# In[66]:
+# In[67]:
 
 
 # Now, the 'advisory_format' variable behave as:
@@ -755,7 +758,7 @@ plt.title("Yield of corn distribution by advisory format")
 plt.show()
 
 
-# In[67]:
+# In[68]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -776,7 +779,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There are unequal variances between different advisory format because {p} is greater than 0.05")
 
 
-# In[68]:
+# In[69]:
 
 
 # Then, I'll apply the non-parametric alternative test for comparaison (U Mann-Withney Test):
@@ -788,7 +791,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 # 
 # - Variable 'advisory_language':
 
-# In[69]:
+# In[70]:
 
 
 # Now, the 'advisory_language' variable behave as:
@@ -797,7 +800,7 @@ plt.title("Yield of corn distribution by advisory language")
 plt.show()
 
 
-# In[70]:
+# In[71]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -818,7 +821,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There are unequal variances between different advisory format because {p} is greater than 0.05")
 
 
-# In[71]:
+# In[72]:
 
 
 # Then, I'll apply the non-parametric alternative test for comparaison (Kruskal-Wallis Test):
@@ -829,7 +832,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 
 # The p-value of 0.1486936 calculated above is greater than 0.05; therefore, there is no significant impact on corn production based on the advisory language.
 
-# In[72]:
+# In[73]:
 
 
 # Now, the 'acreage' variable behave as:
@@ -838,7 +841,7 @@ plt.title("Yield of corn distribution by acres of land")
 plt.show()
 
 
-# In[73]:
+# In[74]:
 
 
 #Transformation of the data type in the variable 'acreage':
@@ -851,7 +854,7 @@ aty_ac_15
 
 # The farmers identifyed previously produce less yield than its peers in the category; however, the amount of laborers used is typical and the fertilizer amount used represent the median value of the category. Then, those registries are considered as insiders and will not be removed.
 
-# In[74]:
+# In[75]:
 
 
 # Let's continue the same procedure for categorical variables as before:
@@ -872,7 +875,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There are unequal variances depending on the amount of land cultivated because {p} is greater than 0.05")
 
 
-# In[75]:
+# In[76]:
 
 
 # Then, I'll apply the non-parametric alternative test for comparaison (Kruskal-Wallis Test):
@@ -883,7 +886,7 @@ print(f"U-statistic: {stat}, P-value: {p}")
 
 # The amount of cultivable land used in production was proven to be a variable that explain a lot of corn yield because the p-value calculated was almost zero.
 
-# In[76]:
+# In[77]:
 
 
 # The groups can be checked as:
@@ -893,7 +896,7 @@ for name, group in corn_subset.groupby("advisory_language"):
 
 # ### Additionally, the continuous variables are visualized as follows:
 
-# In[77]:
+# In[78]:
 
 
 sns.pairplot(corn_subset)
@@ -901,7 +904,7 @@ sns.pairplot(corn_subset)
 
 # - Variable 'fertilizer_amount':
 
-# In[78]:
+# In[79]:
 
 
 # The variable 'acreage' can be visualized as:
@@ -909,7 +912,7 @@ corn_subset.plot(kind='scatter', x = 'fertilizer_amount', y = 'yield',
                  title='Yield of corn by land')
 
 
-# In[79]:
+# In[80]:
 
 
 # Test for Normality (Shapiro-Wilk)
@@ -923,7 +926,7 @@ print(f"Statistic: {stat}, P-value: {p}")
 print(f"There is heterocedasticity depending on the amount of fertilizer used because {p} is smaller than 0.05")
 
 
-# In[80]:
+# In[81]:
 
 
 # The correlation of the numerical variables is stimated by the Test of Pearson:
@@ -935,19 +938,19 @@ pearsonr(x=corn_subset['yield'], y=corn_subset['fertilizer_amount'],
 
 # The final cleaned data is the following:
 
-# In[81]:
+# In[82]:
 
 
 corn_subset.info()
 
 
-# In[82]:
+# In[83]:
 
 
 corn_subset.head()
 
 
-# In[83]:
+# In[84]:
 
 
 categorical_columns = ['education', 'age_bracket', 'household_size', 'laborers', 
@@ -965,7 +968,7 @@ not_significant_var = ['gender', 'main_credit_source', 'farm_records', 'extensio
 # ## Step 4: Model identification
 # The cleaned dataset is filtered to include the significant variables identified above.
 
-# In[84]:
+# In[85]:
 
 
 corn_cleaned = corn_subset[significant_var]
@@ -975,7 +978,7 @@ corn_cleaned.head()
 
 # Working dataset is prepared and splitted as follows:
 
-# In[85]:
+# In[86]:
 
 
 # Preparation dataset
@@ -988,14 +991,14 @@ y = corn_cleaned['yield']
 X_dic = X.to_dict(orient='records')
 
 
-# In[86]:
+# In[87]:
 
 
 # The data is transformed to dictionaries as:
 X_dic[0]
 
 
-# In[87]:
+# In[88]:
 
 
 # Instanciating the vectorizer for Hot Encoding:
@@ -1005,7 +1008,7 @@ dv = DictVectorizer(sparse=False)
 X_encoded = dv.fit_transform(X_dic)
 
 
-# In[88]:
+# In[89]:
 
 
 # The vectorized rows are transformed to the form of:
@@ -1016,7 +1019,7 @@ X_encoded[0]
 
 # Dataset splitted as follows: 60% for training, 20% for validation, and 20% for testing.
 
-# In[89]:
+# In[90]:
 
 
 # We first split for testing
@@ -1032,7 +1035,7 @@ print(f'The number of registries in the train dataset is {len(X_train)}, in the 
 # 
 # __1. Linear Regression Model:__
 
-# In[90]:
+# In[91]:
 
 
 # The model is trained as follows:
@@ -1050,7 +1053,7 @@ print("R² Score:", r2_score(y_val, y_pred_val))
 
 # Refining the parameters of a linear regression model typically involves introducing regularization techniques like Ridge Regression (L2 regularization) or Lasso Regression (L1 regularization). The hiperparameters can be selected as:
 
-# In[91]:
+# In[92]:
 
 
 # The first regularized model [Ridge] is 
@@ -1063,7 +1066,7 @@ print("Best Ridge Alpha:", grid_ridge.best_params_)
 ridge_best = grid_ridge.best_estimator_
 
 
-# In[92]:
+# In[93]:
 
 
 # The second regularized model [Lasso] is 
@@ -1076,7 +1079,7 @@ print("Best Lasso Alpha:", grid_lasso.best_params_)
 lasso_best = grid_lasso.best_estimator_
 
 
-# In[93]:
+# In[94]:
 
 
 # The evaluation of metrics for the model will be done using this formula:
@@ -1088,7 +1091,7 @@ def evaluate_model(y_test, y_pred, model_name):
     print(f"  R² Score: {r2}")
 
 
-# In[94]:
+# In[95]:
 
 
 # Predictions for regularized models are:
@@ -1105,7 +1108,7 @@ evaluate_model(y_val, y_pred_lasso, "Lasso Regression")
 # 
 # __2. Random Forest Model:__
 
-# In[95]:
+# In[96]:
 
 
 # The model is trained as follows:
@@ -1121,14 +1124,14 @@ print("RMSE:", np.sqrt(mean_squared_error(y_val, y_pred_val)))
 print("R² Score:", r2_score(y_val, y_pred_val))
 
 
-# In[96]:
+# In[97]:
 
 
 # The parameters of the trained model are:
 random_forest.get_params()
 
 
-# In[97]:
+# In[98]:
 
 
 # Tunning the hyperparameters is crucial. In this case, I'll define the followings:
@@ -1141,7 +1144,7 @@ param_grid = {
 }
 
 
-# In[98]:
+# In[99]:
 
 
 # I'll use GridSearchCV for exhaustive tuning
@@ -1154,7 +1157,7 @@ print("Best parameters for our Random forest model are:", grid_search.best_param
 best_model_grid = grid_search.best_estimator_
 
 
-# In[99]:
+# In[100]:
 
 
 # The evaluation for both random forest models on the test set is:
@@ -1169,7 +1172,7 @@ for name, model in [("Raw Random forest", random_forest), ("Grid Search", best_m
 # 
 # __3. Gradient Boosted Trees (GBT) Model:__
 
-# In[100]:
+# In[101]:
 
 
 # The model is trained as follows:
@@ -1185,13 +1188,13 @@ print("RMSE:", np.sqrt(mean_squared_error(y_val, y_pred_val)))
 print("R² Score:", r2_score(y_val, y_pred_val))
 
 
-# In[101]:
+# In[102]:
 
 
 gbt.get_params()
 
 
-# In[102]:
+# In[103]:
 
 
 # Tunning the hyperparameters is crucial. In this case, I'll define the followings:
@@ -1202,7 +1205,7 @@ param_grid = {
 }
 
 
-# In[103]:
+# In[104]:
 
 
 # I'll use GridSearchCV for exhaustive tuning
@@ -1214,7 +1217,7 @@ grid_gbt.fit(X_train, y_train)
 print("Best Parameters:", grid_gbt.best_params_)
 
 
-# In[104]:
+# In[105]:
 
 
 # The evaluation for both GBT models on the validation set is:
@@ -1229,7 +1232,7 @@ for name, model in [("Raw Gradient Boosted trees", gbt), ("Grid GBT", grid_gbt)]
 # 
 # __To summarize, the chosen models produce the following RMSE and R² scores when applied to the test dataset:__
 
-# In[105]:
+# In[106]:
 
 
 # The list of models evaluated are:
@@ -1252,3 +1255,31 @@ scores_summary
 
 
 # The best model is the Optimized Gradient Boosted Trees (Grid GBT) because it produces the lowest average deviation from the test values (41.775) and provides the highest explanation of variability in yield production (90.1378%).
+
+# ## Step 5. Exporting the model
+# 
+# The selected model will be exported to a binary file (.bin) for later usage:
+
+# In[114]:
+
+
+# The params for the selected model are:
+model_params = grid_gbt.best_params_
+model_params
+
+
+# In[116]:
+
+
+# Defining the model name:
+output_file = f"model_Grid_GBT_learnig={model_params['learning_rate']}_depth={model_params['max_depth']}.bin"
+output_file
+
+
+# In[117]:
+
+
+# Saving the model for external usage
+with open(output_file, 'wb') as f_out:
+    pickle.dump((dv,grid_gbt),f_out)
+
