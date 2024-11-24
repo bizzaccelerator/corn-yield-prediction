@@ -1,37 +1,31 @@
-FROM python:3.11.10-slim
+# Use an official Python image as the base image
+FROM python:3.12.7-slim
 
-# Install necessary dependencies
-RUN apt-get update && apt-get install -y \
-    wget \
-    bzip2 \
-    ca-certificates \
-    libglib2.0-0 \
-    libx11-6 \
-    coreutils \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Install Miniconda
-ENV CONDA_DIR=/opt/conda
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
-    bash /tmp/miniconda.sh -b -p /opt/conda && \
-    rm /tmp/miniconda.sh && \
-    /opt/conda/bin/conda clean -afy
-
-# Add conda to PATH
-# ENV PATH="$CONDA_DIR/bin:$PATH"
-ENV PATH="/opt/conda/bin:$PATH"
-# Copy the environment.yml file
-COPY ml-env.yml /tmp/ml-env.yml
-# Create the Conda environment and activate it
-RUN conda env create -f /tmp/ml-env.yml --verbose && \
-    conda clean -afy
-# Set the default path to include your Conda environment
-ENV PATH="/opt/conda/envs/ml-env/bin:$PATH"
-
-# Set the working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy the application code into the container
+# Install Conda
+RUN apt-get update && apt-get install -y wget bzip2 && \
+    wget -O miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash miniconda.sh -b -p /opt/conda && \
+    rm miniconda.sh && \
+    /opt/conda/bin/conda init && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Add Conda to PATH
+ENV PATH=/opt/conda/bin:$PATH
+
+# Copy environment.yml to the container
+COPY environment.yml .
+
+# Create Conda environment
+RUN conda env create -f environment.yml && \
+    conda clean -afy
+
+# Activate the environment
+ENV PATH=/opt/conda/envs/test/bin:$PATH
+
+# Copy application code
 COPY ["predict.py", "model_Grid_GBT_learnig=0.1_depth=3.bin", "./"]
 
 # Expose the application port
