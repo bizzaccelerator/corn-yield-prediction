@@ -45,9 +45,9 @@ Follow the steps below to reproduce the project locally or on a remote environme
 ### _1. Prerequisites:_
 Ensure the following are installed on your system:
 
-Git - Download Git
-Docker - Install Docker
-(Optional) Python - If you'd like to run the application without Docker.
+- Git - Download Git
+- Docker - Install Docker
+- (Optional) Python - If you'd like to run the application without Docker.
 
 ### _2. Clone the Repository:_
 
