@@ -77,7 +77,11 @@ Ensure the following are installed on your system:
 - Open your web browser and go to: http://localhost:9696
 - Alternatively, test with curl or Postman.
 
-### _6. Stopping and Removing the Container:_
+### _6. Testing the application:_
+
+Open and run the file `test.ipynb`to get the corn yield predicted from the application. Please make sure the variable `farmer` is updated as interested.
+
+### _7. Stopping and Removing the Container:_
 
 - To stop the container:
 
