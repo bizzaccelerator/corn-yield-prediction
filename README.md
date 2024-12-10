@@ -57,7 +57,7 @@ Ensure the following are installed on your system:
 - Open a terminal and navigate to the desired folder.
 - Clone the repository:
 
-> git clone https://github.com/your-username/your-repo-name.git cd your-repo-name
+> git clone https://github.com/bizzaccelerator/corn-yield-prediction.git cd your-repo-name
 
 ### _3. Build the Docker Image:_
 
@@ -80,6 +80,22 @@ Ensure the following are installed on your system:
 ### _6. Testing the application:_
 
 Open and run the file `test.ipynb`to get the corn yield predicted from the application. Please make sure the variable `farmer` is updated as interested.
+
+The variable farmer represents the information collected from surveys transmitted through the HTTP protocol, using JSON, as follows:
+
+```farmer = {"education": "Certificate",
+        "gender": "Male",
+        "age_bracket": "36-45",
+        "household_size": "7",
+        "acreage": "1.5",
+        "fertilizer_amount": 300,
+        "laborers": "3",
+        "main_credit_source": "Credit groups",
+        "farm_records": "Yes",
+        "main_advisory_source": "Radio",
+        "extension_provider": "County Government",
+        "advisory_format": "SMS text",
+        "advisory_language": "Kiswahili"}```
 
 ### _7. Stopping and Removing the Container:_
 
