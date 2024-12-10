@@ -83,7 +83,8 @@ Open and run the file `test.ipynb`to get the corn yield predicted from the appli
 
 The variable farmer represents the information collected from surveys transmitted through the HTTP protocol, using JSON, as follows:
 
-```farmer = {"education": "Certificate",
+```
+farmer = {"education": "Certificate",
         "gender": "Male",
         "age_bracket": "36-45",
         "household_size": "7",
@@ -95,7 +96,8 @@ The variable farmer represents the information collected from surveys transmitte
         "main_advisory_source": "Radio",
         "extension_provider": "County Government",
         "advisory_format": "SMS text",
-        "advisory_language": "Kiswahili"}```
+        "advisory_language": "Kiswahili"}
+```
 
 ### _7. Stopping and Removing the Container:_
 
