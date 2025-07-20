@@ -2,7 +2,7 @@
 
 *A Python-based predictive application for estimating corn yields using survey data, containerized with Docker.*
 
-This fictional project was developed as a midterm evaluation for the Machine Learning Zoomcamp offered by Data Talks Club. Method and objectives were defined for educational purposes only, so I can show the knowledge appropiated during the firsts part of the training. 
+This fictional project was originally developed as a midterm evaluation for the Machine Learning Zoomcamp and improved as a final projecto for MLops Zoomcamp, both offered by Data Talks Club. Method and objectives were defined for educational purposes only, so I can show the knowledge appropiated during the mentioned training. 
 
 The current project simulates a real scenario of information gathering to support effective political decision-making in a mayor's office in Kenya, aiming to ensure food security in the region. 
 
@@ -16,7 +16,15 @@ This could be understood in two leves: a business problem and a technical proble
 Certain region in Kenya has experienced rapid population growth over the past decade in an underdeveloped economic environment. The social group living in this region considers _corn_ as the preferred base for most typical dishes; however, the low level of precipitation threatens sufficient production in the coming years. The Mayor's Office seeks to make the best decisions to ensure food security in the county. To acheive that goal, the prediction of corn production at a household level is a must. That’s why the managing team at the political office needs to know the expected levels of corn production at a household level, the key variables affecting it, so they can further improve the resources allocation process.
 
 ### _Technical problem:_
-As a Machine Learning engineer, I am tasked with building a model that not only predicts the amount of corn produced in that county in Kenya but also helps decision makers at the mayor's office organize resources for optimized corn production. To achieve this goal, the model construction explores data collected from various plantations, identifying several useful variables such as the gender of the plantation leader, the size of the household, and the amount of fertilizer used in corn production, among others. This model is implemented in a cloud solution that serves the model for future use and insights extraction, enhancing its reliability, readability, and security.
+As a senior Machine Learning Engineer, I am responsible for developing a model that predicts the amount of corn likely to be produced in a county in Kenya. This model is designed to support the mayor’s office in planning and distributing resources more effectively, helping improve outcomes for local agriculture.
+
+To build the model, we use detailed data collected from various farms, including information such as the gender of the farm leader, household size, and fertilizer usage. These factors help us understand what influences corn yield.
+
+Throughout the development process, we document the different approaches tested, the data used, and how the model performed. This helps ensure transparency and makes it easier to improve the model over time. We also store and manage different versions of the data and models, so we can always go back and compare results.
+
+The final model is made available through a secure cloud platform, allowing decision-makers to access predictions and insights when needed. This setup supports both easy access and controlled permissions, ensuring the information is both useful and protected.
+
+We’ve also put tools in place to monitor how the model performs in the real world. If the conditions that affect corn production change—such as weather patterns or farming practices—the system will alert us so the model can be reviewed and updated. This ongoing process ensures that the predictions remain accurate and that the tool continues to support strong, evidence-based decisions.
 
 ## Solution proposed
 
