@@ -30,6 +30,8 @@ module "mlflow" {
   db_user          = var.db_user
   db_password      = var.db_password
   db_name          = var.db_name
+  github_owner     = var.github_owner
+  github_repo      = var.github_repo
 }
 
 # module "monitoring" {
