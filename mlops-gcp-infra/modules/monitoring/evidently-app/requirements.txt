@@ -1,0 +1,5 @@
+fastapi==0.109.0
+uvicorn==0.24.0.post1
+evidently==0.7.6
+pandas
+google-cloud-storage
