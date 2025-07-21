@@ -1,1 +1,0 @@
-{"Modules":[{"Key":"gcs","Source":"./modules/gcs","Dir":"modules/gcs"},{"Key":"mlflow","Source":"./modules/mlflow","Dir":"modules/mlflow"},{"Key":"","Source":"","Dir":"."},{"Key":"monitoring","Source":"./modules/monitoring","Dir":"modules/monitoring"}]}
