@@ -91,3 +91,29 @@ resource "google_cloud_run_service_iam_member" "invoker" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+
+resource "google_project_service" "cloudbuild" {
+  service = "cloudbuild.googleapis.com"
+}
+
+resource "google_project_service" "artifactregistry" {
+  service = "artifactregistry.googleapis.com"
+}
+
+resource "google_cloudbuild_trigger" "mlflow_server_trigger" {
+  name     = "mlflow-server-trigger"
+  location = "global"
+
+  github {
+    owner = var.github_owner
+    name  = var.github_repo
+
+    push {
+      branch = "^main$"
+    }
+  }
+
+  filename = "modules/mlflow/server/cloudbuild.yaml"
+
+  included_files = ["modules/mlflow/server/**"]
+}

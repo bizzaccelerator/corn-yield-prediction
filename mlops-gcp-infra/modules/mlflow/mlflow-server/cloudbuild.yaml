@@ -1,0 +1,7 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/corn-yield-prediction-kenia/mlflow-server', '.']
+
+images:
+  - 'gcr.io/corn-yield-prediction-kenia/mlflow-server'
+

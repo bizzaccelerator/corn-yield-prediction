@@ -9,3 +9,7 @@ db_password      = "supersecretpassword"
 db_name          = "mlflowdb"
 
 evidently_image = "gcr.io/corn-yield-prediction-kenia/evidently-monitoring:latest"
+
+
+github_owner = "bizzaccelerator"
+github_repo  = "corn-yield-prediction"

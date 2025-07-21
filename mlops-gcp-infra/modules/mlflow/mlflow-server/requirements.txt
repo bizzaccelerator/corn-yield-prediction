@@ -1,0 +1,4 @@
+mlflow[extras]
+psycopg2-binary
+gunicorn
+google-cloud-storage
