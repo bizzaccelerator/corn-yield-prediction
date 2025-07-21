@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+credentials/
+credentials/*
+.terraform/
+*.tfstate
+*.tfstate.backup
