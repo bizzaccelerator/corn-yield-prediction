@@ -112,8 +112,8 @@ resource "google_cloudbuild_trigger" "mlflow_server_trigger" {
     }
   }
 
-  filename       = "mlops-gcp-infra/modules/mlflow/mlflow-server/cloudbuild.yaml" # must be relative to repo root
-  included_files = ["mlops-gcp-infra/modules/mlflow/mlflow-server/**"]
+  filename = "modules/mlflow/mlflow-server/cloudbuild.yaml"
+  included_files = ["modules/mlflow/mlflow-server/**"]
 
   substitutions = {
     _PROJECT_ID   = var.project_id

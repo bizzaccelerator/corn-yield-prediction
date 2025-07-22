@@ -1,7 +1,29 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/corn-yield-prediction-kenia/mlflow-server', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/mlflow-server', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/mlflow-server']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'mlflow-server'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/mlflow-server'
+      - '--region'
+      - 'us-central1' # ✅ Ajusta si usas otra región
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated' # O quítalo si quieres acceso privado
+      - '--port'
+      - '5000' # Asegúrate que tu contenedor escuche aquí
+      - '--memory'
+      - '1Gi'
+      - '--timeout'
+      - '300s'
 
 images:
-  - 'gcr.io/corn-yield-prediction-kenia/mlflow-server'
-
+  - 'gcr.io/$PROJECT_ID/mlflow-server'
