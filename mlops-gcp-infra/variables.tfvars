@@ -13,3 +13,5 @@ evidently_image = "gcr.io/corn-yield-prediction-kenia/evidently-monitoring:lates
 
 github_owner = "bizzaccelerator"
 github_repo  = "corn-yield-prediction"
+
+mlflow_service_name = "mlflow-server"

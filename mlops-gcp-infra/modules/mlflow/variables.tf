@@ -15,3 +15,8 @@ variable "github_repo" {
   description = "GitHub repository name"
   type        = string
 }
+
+variable "mlflow_service_name" {
+  description = "The name of the MLflow Cloud Run service"
+  type        = string
+}

@@ -107,13 +107,17 @@ resource "google_cloudbuild_trigger" "mlflow_server_trigger" {
   github {
     owner = var.github_owner
     name  = var.github_repo
-
     push {
       branch = "^main$"
     }
   }
 
-  filename = "modules/mlflow/server/cloudbuild.yaml"
+  filename       = "modules/mlflow/mlflow-server/cloudbuild.yaml" # must be relative to repo root
+  included_files = ["modules/mlflow/mlflow-server/**"]
 
-  included_files = ["modules/mlflow/server/**"]
+  substitutions = {
+    _PROJECT_ID   = var.project_id
+    _REGION       = var.region
+    _SERVICE_NAME = var.mlflow_service_name
+  }
 }
