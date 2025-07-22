@@ -1,29 +1,20 @@
 steps:
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/mlflow-server', '.']
-
+    args: 
+      - 'build' 
+      - '-t' 
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/mlflow-server:${_IMAGE_TAG}'
+      - '.'
+  
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/mlflow-server']
+    args: 
+      - 'push' 
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/mlflow-server:${_IMAGE_TAG}'
 
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'deploy'
-      - 'mlflow-server'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/mlflow-server'
-      - '--region'
-      - 'us-central1' # ✅ Ajusta si usas otra región
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated' # O quítalo si quieres acceso privado
-      - '--port'
-      - '5000' # Asegúrate que tu contenedor escuche aquí
-      - '--memory'
-      - '1Gi'
-      - '--timeout'
-      - '300s'
+substitutions:
+  _REGION: 'us-central1'
+  _REPO_NAME: 'mlops-repo'
+  _IMAGE_TAG: 'latest'
 
 images:
-  - 'gcr.io/$PROJECT_ID/mlflow-server'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/mlflow-server:${_IMAGE_TAG}'

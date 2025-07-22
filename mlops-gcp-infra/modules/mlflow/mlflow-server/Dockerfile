@@ -10,5 +10,6 @@ WORKDIR /app
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
-EXPOSE 8080
+# Cloud Run usa PORT environment variable
+EXPOSE $PORT
 ENTRYPOINT ["./entrypoint.sh"]
