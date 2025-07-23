@@ -70,45 +70,45 @@ resource "google_project_iam_member" "mlflow_permissions" {
   member  = "serviceAccount:${google_service_account.mlflow_sa.email}"
 }
 
-# Cloud Build Trigger
-resource "google_cloudbuild_trigger" "mlflow_build" {
-  name        = "mlflow-server-build"
-  description = "Build and deploy MLflow server"
+# # Cloud Build Trigger
+# resource "google_cloudbuild_trigger" "mlflow_build" {
+#   name        = "mlflow-server-build"
+#   description = "Build and deploy MLflow server"
   
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
-    push {
-      branch = "^main$"
-    }
-  }
+#   github {
+#     owner = var.github_owner
+#     name  = var.github_repo
+#     push {
+#       branch = "^main$"
+#     }
+#   }
   
-  build {
-    step {
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "build",
-        "-t", "${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID",
-        "./modules/mlflow/mlflow-server/"
-      ]
-    }
+#   build {
+#     step {
+#       name = "gcr.io/cloud-builders/docker"
+#       args = [
+#         "build",
+#         "-t", "${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID",
+#         "./modules/mlflow/mlflow-server/"
+#       ]
+#     }
     
-    step {
-      name = "gcr.io/cloud-builders/docker"
-      args = [
-        "push",
-        "${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID"
-      ]
-    }
+#     step {
+#       name = "gcr.io/cloud-builders/docker"
+#       args = [
+#         "push",
+#         "${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID"
+#       ]
+#     }
     
-    images = ["${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID"]
-  }
+#     images = ["${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID"]
+#   }
   
-  depends_on = [
-    google_project_service.required_apis,
-    google_artifact_registry_repository.mlops_repo
-  ]
-}
+#   depends_on = [
+#     google_project_service.required_apis,
+#     google_artifact_registry_repository.mlops_repo
+#   ]
+# }
 
 # Cloud Run Service
 resource "google_cloud_run_service" "mlflow_server" {
