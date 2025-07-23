@@ -138,13 +138,9 @@ resource "google_project_iam_member" "mlflow_permissions" {
 # Build inicial (null_resource para ejecutar una vez)
 resource "null_resource" "initial_build" {
   provisioner "local-exec" {
-    command     = <<EOF
-      gcloud builds submit . \
-      --config=cloudbuild.yml \
-      --substitutions=_IMAGE_TAG=latest \
-      --project=${var.project_id}
-    EOF
-    working_dir = "${path.root}/../"
+    command     = "gcloud builds submit . --config=cloudbuild.yml --substitutions=_IMAGE_TAG=latest --project=${var.project_id}" 
+    working_dir = path.module
+
   }
   depends_on = [
     google_artifact_registry_repository.mlops_repo,
