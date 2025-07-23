@@ -1,6 +1,7 @@
 # Habilitar APIs necesarias
 resource "google_project_service" "required_apis" {
   for_each = toset([
+    "cloudresourcemanager.googleapis.com",
     "run.googleapis.com",
     "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -70,46 +71,6 @@ resource "google_project_iam_member" "mlflow_permissions" {
   member  = "serviceAccount:${google_service_account.mlflow_sa.email}"
 }
 
-# # Cloud Build Trigger
-# resource "google_cloudbuild_trigger" "mlflow_build" {
-#   name        = "mlflow-server-build"
-#   description = "Build and deploy MLflow server"
-  
-#   github {
-#     owner = var.github_owner
-#     name  = var.github_repo
-#     push {
-#       branch = "^main$"
-#     }
-#   }
-  
-#   build {
-#     step {
-#       name = "gcr.io/cloud-builders/docker"
-#       args = [
-#         "build",
-#         "-t", "${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID",
-#         "./modules/mlflow/mlflow-server/"
-#       ]
-#     }
-    
-#     step {
-#       name = "gcr.io/cloud-builders/docker"
-#       args = [
-#         "push",
-#         "${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID"
-#       ]
-#     }
-    
-#     images = ["${var.region}-docker.pkg.dev/$PROJECT_ID/mlops-repo/mlflow-server:$BUILD_ID"]
-#   }
-  
-#   depends_on = [
-#     google_project_service.required_apis,
-#     google_artifact_registry_repository.mlops_repo
-#   ]
-# }
-
 # Cloud Run Service
 resource "google_cloud_run_service" "mlflow_server" {
   name     = var.mlflow_service_name
@@ -161,14 +122,38 @@ resource "google_cloud_run_service" "mlflow_server" {
   
   depends_on = [
     google_project_service.required_apis,
-    google_sql_database_instance.mlflow_db
+    google_sql_database_instance.mlflow_db,
+    google_artifact_registry_repository.mlops_repo
   ]
 }
 
-# IAM para acceso público (opcional)
+# IAM para acceso público
 resource "google_cloud_run_service_iam_member" "public_access" {
   service  = google_cloud_run_service.mlflow_server.name
   location = google_cloud_run_service.mlflow_server.location
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# Build inicial (null_resource para ejecutar una vez)
+resource "null_resource" "initial_build" {
+  provisioner "local-exec" {
+    command = <<EOF
+gcloud builds submit . \
+  --config=cloudbuild.yml \
+  --substitutions=_IMAGE_TAG=latest \
+  --project=${var.project_id}
+EOF
+    working_dir = "${path.root}/../"
+  }
+  
+  depends_on = [
+    google_artifact_registry_repository.mlops_repo,
+    google_project_service.required_apis
+  ]
+  
+  triggers = {
+    dockerfile_hash = filemd5("${path.module}/mlflow-server/Dockerfile")
+    entrypoint_hash = filemd5("${path.module}/mlflow-server/entrypoint.sh")
+  }
 }
