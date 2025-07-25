@@ -26,3 +26,9 @@ variable "mlflow_service_name" {
   description = "The name of the MLflow Cloud Run service"
   type        = string
 }
+
+variable "allow_public_access" {
+  description = "Allow public access to MLflow server"
+  type        = bool
+  default     = true
+}
