@@ -5,11 +5,23 @@ resource "google_project_service" "required_apis" {
     "run.googleapis.com",
     "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com",
-    "sqladmin.googleapis.com"
+    "sqladmin.googleapis.com",
+    "iam.googleapis.com"
   ])
 
   project = var.project_id
   service = each.value
+
+  # Evitar problemas al destruir la infraestructura
+  disable_dependent_services = false
+  disable_on_destroy         = false
+  
+  # Configurar timeouts para APIs que tardan en habilitarse
+  timeouts {
+    create = "10m"
+    update = "10m"
+    delete = "10m"
+    }
 }
 
 # Artifact Registry
@@ -165,5 +177,10 @@ resource "google_cloud_run_service_iam_binding" "mlflow_public_access" {
   
   members = [
     "allUsers"
+  ]
+  
+  depends_on = [
+    google_project_service.required_apis,
+    google_cloud_run_service.mlflow_server
   ]
 }
