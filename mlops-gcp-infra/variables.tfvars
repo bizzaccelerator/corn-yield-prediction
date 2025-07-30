@@ -15,3 +15,7 @@ github_owner = "bizzaccelerator"
 github_repo  = "corn-yield-prediction"
 
 mlflow_service_name = "mlflow-server"
+
+# Kestra configuration
+kestra_db_password = "kestra_secure_password_2024"
+zone        = "us-central1-a"

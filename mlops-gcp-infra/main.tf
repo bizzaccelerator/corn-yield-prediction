@@ -36,6 +36,17 @@ module "mlflow" {
   allow_public_access = var.allow_public_access 
 }
 
+module "kestra" {
+  source = "./modules/kestra"
+
+  project_id      = var.project_id
+  project_name    = replace(var.project_id, "-", "_")
+  region          = var.region
+  zone            = var.zone
+  db_password     = var.kestra_db_password
+  gcs_bucket_name = module.gcs.kestra_bucket_name
+}
+
 # module "monitoring" {
 #   source = "./modules/monitoring"
 #   region = var.region

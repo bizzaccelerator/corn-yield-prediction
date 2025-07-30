@@ -32,3 +32,17 @@ variable "allow_public_access" {
   type        = bool
   default     = true
 }
+
+# Kestra-specific variables
+variable "kestra_db_password" {
+  description = "Password for Kestra database user"
+  type        = string
+  sensitive   = true
+  default     = "kestra_secure_password_2024"
+}
+
+variable "zone" {
+  description = "GCP zone"
+  type        = string
+  default     = "us-central1-a"
+}
