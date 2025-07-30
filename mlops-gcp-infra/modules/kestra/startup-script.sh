@@ -55,46 +55,12 @@ echo "Creating Kestra directory..."
 mkdir -p /opt/kestra
 cd /opt/kestra
 
-# Create application.yml configuration file
-echo "Creating Kestra configuration..."
-cat > application.yml << EOF
-kestra:
-  server:
-    access-log:
-      enabled: false
-
-  repository:
-    type: postgres
-
-  storage:
-    type: gcs
-    bucket: ${gcs_bucket}
-
-  queue:
-    type: postgres
-
-  secret:
-    type: postgres
-
-datasources:
-  postgres:
-    url: jdbc:postgresql://${db_host}:5432/${db_name}
-    driverClassName: org.postgresql.Driver
-    username: ${db_user}
-    password: ${db_password}
-
-micronaut:
-  security:
-    enabled: false
-  server:
-    port: 8080
-    host: 0.0.0.0
-
-logging:
-  level:
-    io.kestra: INFO
-    root: WARN
-EOF
+# Debug: Show variables
+echo "Debug: Database host: ${db_host}"
+echo "Debug: Database name: ${db_name}"
+echo "Debug: Database user: ${db_user}"
+echo "Debug: GCS bucket: ${gcs_bucket}"
+echo "Debug: Project ID: ${project_id}"
 
 # Create docker-compose.yml file
 echo "Creating Docker Compose configuration..."
@@ -110,7 +76,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/kestra-wd:/tmp/kestra-wd:rw
-      - ./application.yml:/app/application.yml:ro
     environment:
       KESTRA_CONFIGURATION: |
         kestra:
@@ -121,7 +86,9 @@ services:
             type: postgres
           storage:
             type: gcs
-            bucket: ${gcs_bucket}
+            gcs:
+              bucket: ${gcs_bucket}
+              project-id: ${project_id}
           queue:
             type: postgres
           secret:
@@ -150,7 +117,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 EOF
 
 # Wait for database to be ready
@@ -181,7 +148,7 @@ docker compose up -d
 
 # Wait for Kestra to be healthy
 echo "Waiting for Kestra to start..."
-max_attempts=20
+max_attempts=30
 attempt=1
 
 while [ $attempt -le $max_attempts ]; do

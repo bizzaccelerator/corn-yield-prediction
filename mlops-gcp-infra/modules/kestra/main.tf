@@ -11,7 +11,7 @@ resource "google_sql_database_instance" "kestra_db" {
 
   settings {
     tier = "db-f1-micro"
-    
+
     backup_configuration {
       enabled                        = true
       start_time                    = "23:00"
@@ -135,6 +135,9 @@ resource "google_compute_instance" "kestra_vm" {
   metadata = {
     startup-script = local.startup_script
   }
+
+  # Allow recreation when startup script changes
+  metadata_startup_script = local.startup_script
 
   depends_on = [
     google_sql_database_instance.kestra_db,
