@@ -11,6 +11,7 @@ variables:
   mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
   gcp_project: "corn-yield-prediction-kenia"
   experiment_name: "corn-yield-prediction"
+  model_name: "corn-yield-predictor"
 
 tasks:
   - id: download_dataset
@@ -64,6 +65,7 @@ tasks:
       MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
       # Optional: Set experiment name
       MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+      MODEL_NAME: "{{ vars.model_name}}"
     beforeCommands:
       - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage
     inputFiles:
@@ -76,4 +78,26 @@ tasks:
     outputFiles:
       - "model_artifacts/**"
       - "*.pkl"
+      - "*.json"
+  
+  - id: model_registry_management
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: Manage model versions and transitions in MLflow registry
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - model_registry.py
+    env:
+      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+      MODEL_NAME: "{{ vars.model_name}}"
+    beforeCommands:
+      - pip install mlflow google-cloud-storage pandas
+    inputFiles:
+      run_info.json: "{{ outputs.train_linear_model.outputFiles['model_artifacts/run_info.json'] }}"
+    commands:
+      - python model_registry.py
+    outputFiles:
       - "*.json"

@@ -15,6 +15,7 @@ from sklearn.linear_model import LinearRegression
 
 # Setup MLflow tracking URI
 mlflow_uri = os.getenv('MLFLOW_TRACKING_URI', "MLFLOW_TRACKING_URI")
+model_name = os.getenv('MODEL_NAME')
 mlflow.set_tracking_uri(mlflow_uri)
 
 print(f"MLflow Tracking URI: {mlflow_uri}")
@@ -76,6 +77,13 @@ with mlflow.start_run(run_name="linear-regression-corn-yield"):
     with open('model_artifacts/linear_model.pkl', 'wb') as f:
         pickle.dump(linear, f)
     
+    # Log the model to MLflow
+    mlflow.sklearn.log_model(
+        sk_model=linear,
+        artifact_path="model",
+        registered_model_name=model_name  # This registers the model
+    )
+
     # Save metrics and run info
     run_info = {
         'mlflow_run_id': mlflow.active_run().info.run_id,
@@ -91,6 +99,3 @@ with mlflow.start_run(run_name="linear-regression-corn-yield"):
     print(f"Model training completed!")
     print(f"MLflow Run ID: {mlflow.active_run().info.run_id}")
     print(f"Model saved locally and logged to MLflow")
-
-# The best model is the Linear Regression model with RMSE and R² score as shown above.
-# This model explains the variability in corn yield with the performance metrics displayed.
