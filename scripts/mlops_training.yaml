@@ -65,7 +65,7 @@ tasks:
       # Optional: Set experiment name
       MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
     beforeCommands:
-      - pip install pandas numpy scikit-learn mlflow==3.1.4
+      - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage
     inputFiles:
       X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
       y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
