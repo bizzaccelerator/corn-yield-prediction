@@ -27,12 +27,6 @@ linear.fit(X_train, y_train)
 # The trained model is used to predict the values in the test dataset:
 y_pred_val = linear.predict(X_val)
 
-# The main indicator for assessing the validity of the model is the Root Mean Squared Error (RMSE).
-print("Linear Regression Metrics:")
-print("RMSE:", np.sqrt(mean_squared_error(y_val, y_pred_val)))
-print("R² Score:", r2_score(y_val, y_pred_val))
-
-
 # The evaluation of metrics for the model will be done using this formula:
 def evaluate_model(y_test, y_pred, model_name):
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
