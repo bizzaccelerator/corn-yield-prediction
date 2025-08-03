@@ -1,0 +1,67 @@
+id: data_cleaning
+namespace: corn_mlops_flow
+
+# inputs:
+#   - id: local_url
+#     type: STRING
+#     # defaults: https://dummyjson.com/products
+#     displayName: "Your complete remote file path"
+
+tasks:
+  - id: download_dataset
+    type: io.kestra.plugin.scripts.python.Script
+    description: Download corn farming dataset from Kaggle using authenticated API
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+    - pip install kagglehub
+    - pip install kaggle 
+    outputFiles:
+      - "corn_data.csv"
+    script: |
+      import kaggle
+      kaggle.api.authenticate()
+      handle = "japondo/corn-farming-data"
+      print("Los archivos a descargar son: ", kaggle.api.dataset_list_files(handle).files)
+      kaggle.api.dataset_download_files(handle, path=".", unzip=True)
+
+  - id: clean_split
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: Clean the dataset and preparing for training stage
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - clean.py
+    beforeCommands:
+      - pip install pandas scikit-learn 
+    inputFiles:
+      corn.csv: "{{ outputs.download_dataset.outputFiles['corn_data.csv'] }}"
+    commands:
+      - python clean.py
+    outputFiles:
+      - "data_splits/*.csv"
+
+  - id: train_linear_model
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: Training the linear model 
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - train_linear.py
+    beforeCommands:
+      - pip install pandas numpy scikit-learn 
+    inputFiles:
+      X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
+      y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
+      X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+      y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+    commands:
+      - python train_linear.py
+    # outputFiles:
+    #   - "data_splits/*.csv"
