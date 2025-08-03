@@ -1,31 +1,38 @@
-
 # The first step involves importing the libraries required for the process:
 import pandas as pd
 import numpy as np
-
+import mlflow
+import mlflow.sklearn
+import os
+import pickle
+import json
 
 # Model packages used
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 
+### Step 4: Model identification ### - Let's try some models:
 
-### Step 4: Model identification
-### - Let's try some models:
+# Setup MLflow tracking URI
+mlflow_uri = os.getenv('MLFLOW_TRACKING_URI', "MLFLOW_TRACKING_URI")
+mlflow.set_tracking_uri(mlflow_uri)
+
+print(f"MLflow Tracking URI: {mlflow_uri}")
 
 # The prepared datasets are:
-X_train = pd.read_csv("X_train.csv", sep="," )
-y_train = pd.read_csv("y_train.csv", sep="," )
-X_val = pd.read_csv("X_val.csv", sep="," )
-y_val = pd.read_csv("y_val.csv", sep="," )
+X_train = pd.read_csv("X_train.csv", sep=",")
+y_train = pd.read_csv("y_train.csv", sep=",")
+X_val = pd.read_csv("X_val.csv", sep=",")
+y_val = pd.read_csv("y_val.csv", sep=",")
 
+# Handle target column if it exists
+if 'target' in y_train.columns:
+    y_train = y_train['target']
+if 'target' in y_val.columns:
+    y_val = y_val['target']
 
-# __1. Linear Regression Model:__
-# The model is trained as follows:
-linear = LinearRegression()
-linear.fit(X_train, y_train)
-
-# The trained model is used to predict the values in the test dataset:
-y_pred_val = linear.predict(X_val)
+print(f"Training data shape: {X_train.shape}")
+print(f"Validation data shape: {X_val.shape}")
 
 # The evaluation of metrics for the model will be done using this formula:
 def evaluate_model(y_test, y_pred, model_name):
@@ -34,10 +41,56 @@ def evaluate_model(y_test, y_pred, model_name):
     print(f"{model_name} Performance:")
     print(f"  RMSE: {rmse}")
     print(f"  R² Score: {r2}")
+    return {'rmse': rmse, 'r2_score': r2}
 
-# The evaluation for the linear models are:
-evaluation_report = evaluate_model(y_val, y_pred_val, "Linear Regression")
+# __1. Linear Regression Model:__
+# The model is trained as follows:
 
-print(evaluation_report)
+# Enable autologging for scikit-learn
+mlflow.sklearn.autolog(log_input_examples=False, log_model_signatures=False)
 
-# The best model is the Lasso Regression model, as it has the lowest RMSE and the highest R² score. This model explains 81.83% of the variability in corn yield and has an average deviation of 51.041 units in corn production between the actual values in the test dataset and the model's predictions.
+# Start an MLflow run
+with mlflow.start_run(run_name="linear-regression-corn-yield"):
+    
+    # Log dataset information
+    mlflow.log_param("n_features", X_train.shape[1])
+    mlflow.log_param("n_train_samples", X_train.shape[0])
+    mlflow.log_param("n_val_samples", X_val.shape[0])
+    
+    linear = LinearRegression()
+    linear.fit(X_train, y_train)
+    
+    # The trained model is used to predict the values in the validation dataset:
+    y_pred_val = linear.predict(X_val)
+    
+    # The evaluation for the linear models are:
+    metrics = evaluate_model(y_val, y_pred_val, "Linear Regression")
+    
+    # Log validation metrics
+    mlflow.log_metric("val_rmse", metrics['rmse'])
+    mlflow.log_metric("val_r2_score", metrics['r2_score'])
+    
+    # Save model locally for Kestra (in addition to MLflow logging)
+    os.makedirs("model_artifacts", exist_ok=True)
+    
+    with open('model_artifacts/linear_model.pkl', 'wb') as f:
+        pickle.dump(linear, f)
+    
+    # Save metrics and run info
+    run_info = {
+        'mlflow_run_id': mlflow.active_run().info.run_id,
+        'mlflow_tracking_uri': mlflow_uri,
+        'validation_metrics': metrics,
+        'model_type': 'LinearRegression',
+        'model_uri': f"runs:/{mlflow.active_run().info.run_id}/model"
+    }
+    
+    with open('model_artifacts/run_info.json', 'w') as f:
+        json.dump(run_info, f, indent=2)
+    
+    print(f"Model training completed!")
+    print(f"MLflow Run ID: {mlflow.active_run().info.run_id}")
+    print(f"Model saved locally and logged to MLflow")
+
+# The best model is the Linear Regression model with RMSE and R² score as shown above.
+# This model explains the variability in corn yield with the performance metrics displayed.

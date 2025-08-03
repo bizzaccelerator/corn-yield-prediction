@@ -7,6 +7,11 @@ namespace: corn_mlops_flow
 #     # defaults: https://dummyjson.com/products
 #     displayName: "Your complete remote file path"
 
+variables:
+  mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
+  gcp_project: "corn-yield-prediction-kenia"
+  experiment_name: "corn-yield-prediction"
+
 tasks:
   - id: download_dataset
     type: io.kestra.plugin.scripts.python.Script
@@ -54,8 +59,13 @@ tasks:
       enabled: true
       include:
         - train_linear.py
+    env:
+      # MLflow configuration - using your Cloud Run URL
+      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+      # Optional: Set experiment name
+      MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
     beforeCommands:
-      - pip install pandas numpy scikit-learn 
+      - pip install pandas numpy scikit-learn mlflow==3.1.4
     inputFiles:
       X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
       y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
@@ -63,5 +73,7 @@ tasks:
       y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
     commands:
       - python train_linear.py
-    # outputFiles:
-    #   - "data_splits/*.csv"
+    outputFiles:
+      - "model_artifacts/**"
+      - "*.pkl"
+      - "*.json"
