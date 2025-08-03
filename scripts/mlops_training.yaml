@@ -1,11 +1,16 @@
 id: data_cleaning
 namespace: corn_mlops_flow
 
-# inputs:
-#   - id: local_url
-#     type: STRING
-#     # defaults: https://dummyjson.com/products
-#     displayName: "Your complete remote file path"
+inputs:
+  - id: model_performance_threshold
+    type: FLOAT
+    defaults: 0.7
+  - id: target_stage
+    type: STRING
+    defaults: Production
+  - id: force_deployment
+    type: BOOLEAN
+    defaults: false
 
 variables:
   mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
@@ -101,3 +106,28 @@ tasks:
       - python model_registry.py
     outputFiles:
       - "*.json"
+  
+  - id: fetch_production_model
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: Fetch the latest production model from MLflow and evaluate performance
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - model_fetch.py
+    beforeCommands:
+      - pip install mlflow pandas numpy scikit-learn
+    env:
+      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri}}"
+      MODEL_NAME: "{{ vars.model_name}}"
+      TARGET_STAGE: "{{ inputs.target_stage}}"
+      THRESHOLD: "{{ inputs.model_performance_threshold }}"
+      FORCE_DEPLOYMENT: "{{ inputs.force_deployment}}"
+    commands:
+      - python model_fetch.py
+    outputFiles:
+      - "model.pkl"
+      - "model_metadata.json"
+      - "deployment_decision.json"
