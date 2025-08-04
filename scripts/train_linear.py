@@ -11,6 +11,12 @@ import json
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.linear_model import LinearRegression
 
+
+t_model = os.getenv('MODEL_TYPE')
+# Extracting the vectorizer 
+with open("dict_vectorizer", 'rb') as f_in:
+    dv = pickle.load(f_in)
+
 ### Step 4: Model identification ### - Let's try some models:
 
 # Setup MLflow tracking URI
@@ -74,9 +80,11 @@ with mlflow.start_run(run_name="linear-regression-corn-yield"):
     # Save model locally for Kestra (in addition to MLflow logging)
     os.makedirs("model_artifacts", exist_ok=True)
     
-    with open('model_artifacts/linear_model.pkl', 'wb') as f:
-        pickle.dump(linear, f)
-    
+    # Defining the model name:
+    output_file = f"model_artifacts/{t_model}_model.bin"
+    with open(output_file, 'wb') as f_out:
+        pickle.dump((dv, linear), f_out)
+ 
     # Log the model to MLflow
     mlflow.sklearn.log_model(
         sk_model=linear,

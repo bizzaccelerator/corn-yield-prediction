@@ -11,6 +11,14 @@ inputs:
   - id: force_deployment
     type: BOOLEAN
     defaults: false
+  - id: model_selection
+    type: SELECT
+    displayName: "Select the model you are interested:"
+    defaults: linear
+    values:
+      - linear
+      - ridge
+      - lasso
 
 variables:
   mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
@@ -54,6 +62,7 @@ tasks:
       - python clean.py
     outputFiles:
       - "data_splits/*.csv"
+      - "vectorizer.pkl"
 
   - id: train_linear_model
     type: io.kestra.plugin.scripts.python.Commands
@@ -71,6 +80,7 @@ tasks:
       # Optional: Set experiment name
       MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
       MODEL_NAME: "{{ vars.model_name}}"
+      MODEL_TYPE: "{{ inputs.model_selection}}"
     beforeCommands:
       - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage
     inputFiles:
@@ -78,6 +88,7 @@ tasks:
       y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
       X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
       y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+      dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
     commands:
       - python train_linear.py
     outputFiles:

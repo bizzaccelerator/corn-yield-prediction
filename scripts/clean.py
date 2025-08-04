@@ -1,6 +1,7 @@
 # The first step involves importing the libraries required for the process:
 import pandas as pd
 import os
+import pickle
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.model_selection import train_test_split
 
@@ -121,3 +122,7 @@ save_to_csv(X_test, 'data_splits/X_test.csv')
 pd.DataFrame({'target': y_train}).to_csv('data_splits/y_train.csv', index=False)
 pd.DataFrame({'target': y_val}).to_csv('data_splits/y_val.csv', index=False)
 pd.DataFrame({'target': y_test}).to_csv('data_splits/y_test.csv', index=False)
+
+# Save the vectorizer
+with open('vectorizer.pkl', 'wb') as f:
+    pickle.dump(dv, f)
