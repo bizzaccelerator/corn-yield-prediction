@@ -139,6 +139,128 @@ tasks:
     commands:
       - python model_fetch.py
     outputFiles:
-      - "model.pkl"
+      - "model.bin"
       - "model_metadata.json"
       - "deployment_decision.json"
+  
+  - id: debug_deployment_value
+    type: io.kestra.plugin.core.log.Log
+    message: "Raw value: '{{ (read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy')) + '' }}'"
+
+  - id: debug_deployment_type
+    type: io.kestra.plugin.core.log.Log
+    message: "JQ output: {{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') }}"
+  
+  - id: debug_json_structure
+    type: io.kestra.plugin.core.log.Log
+    message: "Full JSON content: {{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) }}"
+
+  - id: deployment_decision_gate
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') }}"
+    # value: >
+    #   {{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') | first }}
+    then:
+      - id: build_docker_image
+        type: io.kestra.plugin.scripts.shell.Commands
+        description: Build Docker image for the model service
+        inputFiles:
+          model.bin: "{{ outputs.fetch_production_model.outputFiles['model.bin'] }}"
+          model_metadata.json: "{{ outputs.fetch_production_model.outputFiles['model_metadata.json'] }}"
+        commands:
+        - |
+          # Create app directory
+          mkdir -p app
+          
+          # Move model files to app directory
+          mv model.bin app/
+          mv model_metadata.json app/
+          
+          # Create requirements.txt
+          cat > app/requirements.txt << EOF
+          flask==2.3.3
+          pandas==2.0.3
+          numpy==1.24.3
+          scikit-learn
+          waitress==2.0.0
+          google-cloud-logging==3.8.0
+          EOF
+
+          # Create main.py (Flask app)
+          cat > app/main.py << 'EOF'
+          import os
+          import json
+          import logging
+          import pickle
+          from flask import Flask, request, jsonify
+          import pandas as pd
+          import numpy as np
+
+          # The model used is referred
+          model_file = 'model.bin'
+
+          # Setup logging
+          logging.basicConfig(level=logging.INFO)
+          logger = logging.getLogger(__name__)
+
+          # Load model and metadata at startup
+          try:
+              with open(model_file, 'rb') as f_in:
+                  dv, model = pickle.load(f_in)
+                  
+              with open('model_metadata.json', 'r') as f:
+                  metadata = json.load(f)
+                  
+              logger.info(f"Model loaded: {metadata['model_name']} v{metadata['model_version']}")
+          except Exception as e:
+              logger.error(f"Failed to load model: {e}")
+              raise
+
+          # Instantiating the app
+          app = Flask('yield')
+
+          @app.route('/predict', methods=['POST'])
+          # Function that calculates the target variable:
+          def predict():
+              farmer = request.get_json()
+              X = dv.transform([farmer])
+              y_pred = model.predict(X)[0]
+              result = {
+                  'Yield prediction': y_pred,
+              }
+              return jsonify(result)
+
+          if __name__ == "__main__":
+              app.run(debug=True, host='0.0.0.0', port=9696)
+          EOF
+
+          # Create Dockerfile
+          cat > Dockerfile << EOF
+          FROM python:3.9-slim
+
+          WORKDIR /app
+          
+          # Copy requirements and install dependencies
+          COPY app/requirements.txt .
+          RUN pip install --no-cache-dir -r requirements.txt
+          
+          # Copy application files
+          COPY app/ .
+          
+          # Expose the application port
+          EXPOSE 9696
+
+          # Set the default command to run the application
+          CMD ["waitress-serve", "--listen=0.0.0.0:9696", "main:app"]
+          EOF
+          
+          echo "Docker files created successfully"
+        
+        outputFiles:
+          - "Dockerfile"
+          - "app/**"
+      
+    else:
+    - id: skip_deployment
+      type: io.kestra.plugin.core.log.Log
+      message: "Deployment skipped - should_deploy is false"

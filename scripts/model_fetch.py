@@ -4,7 +4,7 @@ import os
 import json
 import pickle
 from mlflow.tracking import MlflowClient
-      
+   
 # Setup MLflow
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 client = MlflowClient()
@@ -119,8 +119,8 @@ try:
     model_uri = f"models:/{model_name}/{model_version.version}"
     loaded_model = mlflow.sklearn.load_model(model_uri)
           
-    # Save model as pickle for the web service
-    with open('model.pkl', 'wb') as f:
+    # Save model as bin for the web service
+    with open('model.bin', 'wb') as f:
         pickle.dump(loaded_model, f)
           
     # Create comprehensive metadata file
