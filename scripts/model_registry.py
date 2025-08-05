@@ -16,7 +16,7 @@ model_name = os.getenv('MODEL_NAME')
 run_id = run_info['mlflow_run_id']
 val_rmse = run_info['validation_metrics']['rmse']
 val_r2 = run_info['validation_metrics']['r2_score']
-      
+
 print(f"Managing model: {model_name}")
 print(f"Run ID: {run_id}")
 print(f"Validation RMSE: {val_rmse:.4f}")
@@ -171,9 +171,9 @@ try:
                 except Exception as e:
                     print(f"Warning: Could not add production promotion tag: {e}")
                       
-                print(f"🏆 Model version {version_number} promoted to Production!")
+                print(f"Model version {version_number} promoted to Production!")
             else:
-                print("⏸️  Model kept in Staging - not enough improvement for Production")
+                print("Model kept in Staging - not enough improvement for Production")
               
     else:
         print("Model does not meet quality criteria")

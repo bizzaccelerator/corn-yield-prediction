@@ -1,4 +1,4 @@
-id: data_cleaning
+id: data_mlops_workflow
 namespace: corn_mlops_flow
 
 inputs:
@@ -32,6 +32,9 @@ tasks:
     description: Download corn farming dataset from Kaggle using authenticated API
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
+    env:
+      KAGGLE_USERNAME: "{{ kv('KAGGLE_USERNAME') }}"
+      KAGGLE_KEY: "{{ kv('KAGGLE_KEY') }}"
     beforeCommands:
     - pip install kagglehub
     - pip install kaggle 
@@ -128,6 +131,8 @@ tasks:
       enabled: true
       include:
         - model_fetch.py
+    inputFiles:
+      dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
     beforeCommands:
       - pip install mlflow pandas numpy scikit-learn
     env:
@@ -139,33 +144,19 @@ tasks:
     commands:
       - python model_fetch.py
     outputFiles:
-      - "model.bin"
+      - "*.bin"
       - "model_metadata.json"
       - "deployment_decision.json"
-  
-  - id: debug_deployment_value
-    type: io.kestra.plugin.core.log.Log
-    message: "Raw value: '{{ (read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy')) + '' }}'"
-
-  - id: debug_deployment_type
-    type: io.kestra.plugin.core.log.Log
-    message: "JQ output: {{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') }}"
-  
-  - id: debug_json_structure
-    type: io.kestra.plugin.core.log.Log
-    message: "Full JSON content: {{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) }}"
 
   - id: deployment_decision_gate
     type: io.kestra.plugin.core.flow.If
     condition: "{{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') }}"
-    # value: >
-    #   {{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') | first }}
     then:
       - id: build_docker_image
         type: io.kestra.plugin.scripts.shell.Commands
         description: Build Docker image for the model service
         inputFiles:
-          model.bin: "{{ outputs.fetch_production_model.outputFiles['model.bin'] }}"
+          model.bin: "{{ outputs.fetch_production_model.outputFiles['corn-yield-predictor_model.bin'] }}"
           model_metadata.json: "{{ outputs.fetch_production_model.outputFiles['model_metadata.json'] }}"
         commands:
         - |
@@ -236,7 +227,7 @@ tasks:
 
           # Create Dockerfile
           cat > Dockerfile << EOF
-          FROM python:3.9-slim
+          FROM python:3.11-slim
 
           WORKDIR /app
           

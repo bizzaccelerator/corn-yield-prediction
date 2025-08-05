@@ -8,6 +8,10 @@ from mlflow.tracking import MlflowClient
 # Setup MLflow
 mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
 client = MlflowClient()
+
+# Loading the vectorizer 
+with open("dict_vectorizer", 'rb') as f_in:
+    dv = pickle.load(f_in)
       
 model_name = os.getenv('MODEL_NAME')
 target_stage = os.getenv('TARGET_STAGE') 
@@ -120,8 +124,8 @@ try:
     loaded_model = mlflow.sklearn.load_model(model_uri)
           
     # Save model as bin for the web service
-    with open('model.bin', 'wb') as f:
-        pickle.dump(loaded_model, f)
+    with open(f'{model_name}_model.bin', 'wb') as f:
+        pickle.dump((dv,loaded_model), f)
           
     # Create comprehensive metadata file
     metadata = {
