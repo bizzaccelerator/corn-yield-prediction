@@ -255,9 +255,9 @@ tasks:
           - "app/**"
           - "app.tar.gz"
         
-      - id: build_and_push_to_gcr
+      - id: build_and_push_to_gcr_yaml
         type: io.kestra.plugin.scripts.shell.Commands
-        description: Build Docker image and push to GCR - Simple Version
+        description: Build Docker image using cloudbuild.yaml
         docker:
           image: google/cloud-sdk:alpine
         inputFiles:
@@ -271,75 +271,96 @@ tasks:
           SERVICE_NAME: "corn-predictor-service"
         commands:
           - |
-              echo "Building and pushing to GCR - Simple Method..."
+              set -e
               
-              # Autenticación
+              echo "=== Building with cloudbuild.yaml method ==="
+              
+              echo "1. Setup..."
               gcloud auth activate-service-account --key-file=service_account_key.json
               gcloud config set project $PROJECT_ID
-              
-              # Verificar autenticación
-              echo "Authenticated as: $(gcloud auth list --filter=status:ACTIVE --format="value(account)")"
-              echo "Using project: $(gcloud config get-value project)"
-              
-              # Instalar jq y extraer archivos
               apk add --no-cache jq
               tar -xzf app_archive
               
-              # Verificar archivos
-              echo "Available files:"
-              ls -la
-              
-              if [ ! -f "Dockerfile" ]; then
-                  echo "ERROR: Dockerfile not found!"
-                  exit 1
-              fi
-              
-              echo "Dockerfile content preview:"
-              head -5 Dockerfile
-              
-              # Variables
-              MODEL_VERSION=$(cat model_metadata.json | jq -r '.model_version')
+              MODEL_VERSION=$(jq -r '.model_version // "1"' model_metadata.json)
               TIMESTAMP=$(date +%Y%m%d-%H%M%S)
               
-              echo "Building with:"
-              echo "  - Model Version: $MODEL_VERSION"
-              echo "  - Timestamp: $TIMESTAMP"
+              echo "Project: $PROJECT_ID"
+              echo "Service: $SERVICE_NAME"  
+              echo "Version: $MODEL_VERSION"
+              echo "Timestamp: $TIMESTAMP"
               
-              # Build principal (método más simple)
-              echo "Building image..."
-              gcloud builds submit . \
-                --tag="gcr.io/$PROJECT_ID/$SERVICE_NAME:latest" \
+              echo "2. Creating cloudbuild.yaml..."
+              cat > cloudbuild.yaml << EOF
+              steps:
+              # Build the Docker image
+              - name: 'gcr.io/cloud-builders/docker'
+                args: 
+                  - 'build'
+                  - '-t'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+                  - '.'
+              
+              # Tag with version
+              - name: 'gcr.io/cloud-builders/docker'
+                args: 
+                  - 'tag'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION'
+              
+              # Tag with timestamp  
+              - name: 'gcr.io/cloud-builders/docker'
+                args:
+                  - 'tag' 
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
+              
+              # Push all images
+              images:
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION' 
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
+              
+              timeout: '1200s'
+              
+              options:
+                # Disable log streaming to avoid permission issues
+                logging: CLOUD_LOGGING_ONLY
+              EOF
+              
+              echo "3. Starting build with config file..."
+              BUILD_ID=$(gcloud builds submit \
+                --config=cloudbuild.yaml \
                 --project=$PROJECT_ID \
-                --timeout=1200s \
-                --verbosity=info
+                --async \
+                --format="value(name)" | sed 's|.*/||')
               
-              # Verificar que el build fue exitoso
-              if [ $? -ne 0 ]; then
-                  echo "ERROR: Build failed!"
-                  exit 1
-              fi
+              echo "Build ID: $BUILD_ID"
               
-              # Tags adicionales
-              echo "Adding additional tags..."
-              gcloud container images add-tag \
-                "gcr.io/$PROJECT_ID/$SERVICE_NAME:latest" \
-                "gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION" \
-                --project=$PROJECT_ID --quiet
-                
-              gcloud container images add-tag \
-                "gcr.io/$PROJECT_ID/$SERVICE_NAME:latest" \
-                "gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP" \
-                --project=$PROJECT_ID --quiet
+              echo "4. Monitoring build..."
+              while true; do
+                  STATUS=$(gcloud builds describe $BUILD_ID --project=$PROJECT_ID --format="value(status)")
+                  echo "Build status: $STATUS"
+                  
+                  case $STATUS in
+                      "SUCCESS")
+                          echo "Build successful!"
+                          break
+                          ;;
+                      "FAILURE"|"TIMEOUT"|"CANCELLED"|"INTERNAL_ERROR")
+                          echo "Build failed: $STATUS"
+                          exit 1
+                          ;;
+                      *)
+                          sleep 20
+                          ;;
+                  esac
+              done
               
-              echo "Images pushed successfully!"
-              
-              # Verificar imágenes
-              echo "Images in repository:"
-              gcloud container images list --repository=gcr.io/$PROJECT_ID/$SERVICE_NAME --project=$PROJECT_ID || echo "Could not list images, but build completed"
-              
-              # Build info
+              echo "5. Creating output..."
               cat > build_info.json << EOF
               {
+                "build_status": "SUCCESS",
+                "build_id": "$BUILD_ID", 
                 "project_id": "$PROJECT_ID",
                 "service_name": "$SERVICE_NAME",
                 "model_version": "$MODEL_VERSION",
@@ -348,13 +369,17 @@ tasks:
                   "latest": "gcr.io/$PROJECT_ID/$SERVICE_NAME:latest",
                   "version": "gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION",
                   "timestamp": "gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP"
-                }
+                },
+                "console_url": "https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
               }
               EOF
               
-              echo "Build completed successfully!"
+              echo "Process completed!"
+              cat build_info.json
+              
         outputFiles:
           - "build_info.json"
+          - "cloudbuild.yaml"
       
     else:
     - id: skip_deployment
