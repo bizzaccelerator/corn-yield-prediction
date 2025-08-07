@@ -1,35 +1,32 @@
 steps:
+  # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
-    args: 
+    args:
       - 'build'
       - '-t'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/mlflow-server:${_IMAGE_TAG}'
       - '.'
+    id: 'build-image'
 
+  # Step 2: Push the Docker image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: 
+    args:
       - 'push'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/mlflow-server:${_IMAGE_TAG}'
+    id: 'push-image'
+    waitFor: ['build-image']
 
+  # Step 3: Verify image was pushed successfully (opcional, para debugging)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
-      - 'run'
-      - 'deploy'
-      - 'mlflow-server'
-      - '--image'
+      - 'container'
+      - 'images'
+      - 'describe'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/mlflow-server:${_IMAGE_TAG}'
-      - '--region'
-      - '${_REGION}'
-      - '--platform'
-      - 'managed'
-      - '--allow-unauthenticated'
-      - '--port'
-      - '8080'
-      - '--memory'
-      - '1Gi'
-      - '--timeout'
-      - '300s'
+      - '--format=json'
+    id: 'verify-image'
+    waitFor: ['push-image']
 
 substitutions:
   _REGION: 'us-central1'
@@ -38,3 +35,10 @@ substitutions:
 
 images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO_NAME}/mlflow-server:${_IMAGE_TAG}'
+
+# Configuración adicional
+timeout: '600s'  # 10 minutos timeout
+options:
+  machineType: 'E2_HIGHCPU_8'  # Máquina más potente para builds rápidos
+  diskSizeGb: '100'
+  logging: CLOUD_LOGGING_ONLY

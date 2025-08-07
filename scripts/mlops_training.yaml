@@ -255,7 +255,7 @@ tasks:
           - "app/**"
           - "app.tar.gz"
         
-      - id: build_and_push_to_gcr_yaml
+      - id: build_and_push_to_gcr
         type: io.kestra.plugin.scripts.shell.Commands
         description: Build Docker image using cloudbuild.yaml
         docker:
