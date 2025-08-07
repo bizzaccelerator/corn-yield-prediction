@@ -245,11 +245,116 @@ tasks:
           CMD ["waitress-serve", "--listen=0.0.0.0:9696", "main:app"]
           EOF
           
+          # Archive the app folder
+          tar -czf app.tar.gz app/
+
           echo "Docker files created successfully"
         
         outputFiles:
           - "Dockerfile"
           - "app/**"
+          - "app.tar.gz"
+        
+      - id: build_and_push_to_gcr
+        type: io.kestra.plugin.scripts.shell.Commands
+        description: Build Docker image and push to GCR - Simple Version
+        docker:
+          image: google/cloud-sdk:alpine
+        inputFiles:
+          Dockerfile: "{{ outputs.build_docker_image.outputFiles['Dockerfile'] }}"
+          app_archive: "{{ outputs.build_docker_image.outputFiles['app.tar.gz'] }}"
+          model_metadata.json: "{{ outputs.fetch_production_model.outputFiles['model_metadata.json'] }}"
+          service_account_key.json: "{{ kv('GCP_SERVICE_ACCOUNT_KEY') }}"
+        env:
+          PROJECT_ID: "{{ kv('GCP_PROJECT_ID') }}"
+          REGION: "{{ kv('GCP_REGION') }}"
+          SERVICE_NAME: "corn-predictor-service"
+        commands:
+          - |
+              echo "Building and pushing to GCR - Simple Method..."
+              
+              # Autenticación
+              gcloud auth activate-service-account --key-file=service_account_key.json
+              gcloud config set project $PROJECT_ID
+              
+              # Verificar autenticación
+              echo "Authenticated as: $(gcloud auth list --filter=status:ACTIVE --format="value(account)")"
+              echo "Using project: $(gcloud config get-value project)"
+              
+              # Instalar jq y extraer archivos
+              apk add --no-cache jq
+              tar -xzf app_archive
+              
+              # Verificar archivos
+              echo "Available files:"
+              ls -la
+              
+              if [ ! -f "Dockerfile" ]; then
+                  echo "ERROR: Dockerfile not found!"
+                  exit 1
+              fi
+              
+              echo "Dockerfile content preview:"
+              head -5 Dockerfile
+              
+              # Variables
+              MODEL_VERSION=$(cat model_metadata.json | jq -r '.model_version')
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+              
+              echo "Building with:"
+              echo "  - Model Version: $MODEL_VERSION"
+              echo "  - Timestamp: $TIMESTAMP"
+              
+              # Build principal (método más simple)
+              echo "Building image..."
+              gcloud builds submit . \
+                --tag="gcr.io/$PROJECT_ID/$SERVICE_NAME:latest" \
+                --project=$PROJECT_ID \
+                --timeout=1200s \
+                --verbosity=info
+              
+              # Verificar que el build fue exitoso
+              if [ $? -ne 0 ]; then
+                  echo "ERROR: Build failed!"
+                  exit 1
+              fi
+              
+              # Tags adicionales
+              echo "Adding additional tags..."
+              gcloud container images add-tag \
+                "gcr.io/$PROJECT_ID/$SERVICE_NAME:latest" \
+                "gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION" \
+                --project=$PROJECT_ID --quiet
+                
+              gcloud container images add-tag \
+                "gcr.io/$PROJECT_ID/$SERVICE_NAME:latest" \
+                "gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP" \
+                --project=$PROJECT_ID --quiet
+              
+              echo "Images pushed successfully!"
+              
+              # Verificar imágenes
+              echo "Images in repository:"
+              gcloud container images list --repository=gcr.io/$PROJECT_ID/$SERVICE_NAME --project=$PROJECT_ID || echo "Could not list images, but build completed"
+              
+              # Build info
+              cat > build_info.json << EOF
+              {
+                "project_id": "$PROJECT_ID",
+                "service_name": "$SERVICE_NAME",
+                "model_version": "$MODEL_VERSION",
+                "timestamp": "$TIMESTAMP",
+                "images": {
+                  "latest": "gcr.io/$PROJECT_ID/$SERVICE_NAME:latest",
+                  "version": "gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION",
+                  "timestamp": "gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP"
+                }
+              }
+              EOF
+              
+              echo "Build completed successfully!"
+        outputFiles:
+          - "build_info.json"
       
     else:
     - id: skip_deployment

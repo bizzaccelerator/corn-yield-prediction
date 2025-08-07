@@ -69,7 +69,7 @@ version: "3.8"
 
 services:
   kestra:
-    image: kestra/kestra:latest
+    image: kestra/kestra:v0.23.9
     pull_policy: always
     user: "root"
     command: server standalone
