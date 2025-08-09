@@ -82,7 +82,7 @@ def evaluate_model(y_test, y_pred, model_name):
 def objective_ridge(params):
     alpha = params['alpha']
     model = Ridge(alpha=alpha, random_state=42)    
-    neg_mse = cross_val_score(model, X_train, y_train, cv=5, scoring="neg_mean_squared_error")
+    neg_mse = cross_val_score(model, X_train_full, y_train_full, cv=5, scoring="neg_mean_squared_error")
     return {'loss': -np.mean(neg_mse), 'status': STATUS_OK}
 
 
@@ -144,21 +144,99 @@ if model_selection == 'linear':
 
 
 elif model_selection == 'ridge':
-
-    space_ridge = {
-        'alpha': hp.loguniform('alpha', np.log(1e-4), np.log(1e3))
+    
+    # DISABLE autologging for hyperopt optimization to avoid conflicts
+    mlflow.sklearn.autolog(disable=True)
+    
+    # Start an MLflow run
+    with mlflow.start_run(run_name="ridge-regression-corn-yield"):
+        
+        # Log dataset information
+        mlflow.log_param("n_features", X_train_full.shape[1])
+        mlflow.log_param("n_train_samples", X_train_full.shape[0])
+        mlflow.log_param("n_val_samples", X_test.shape[0])
+        
+        print("Starting hyperparameter optimization...")
+        
+        # Optimization for parameter alpha
+        space_ridge = {
+            'alpha': hp.loguniform('alpha', np.log(1e-4), np.log(1e3))
         }
-
-    trials_ridge = Trials()
-    best_ridge = fmin(fn=objective_ridge, space=space_ridge, algo=tpe.suggest, max_evals=20, trials=trials_ridge)
-
-    model_ridge = Ridge(alpha=best_ridge['alpha'], random_state=42)
-
-    model_ridge.fit(X_train_full, y_train_full)
-
-    y_pred_ridge = model_ridge.predict(X_test)
-
-    rmse_ridge = np.sqrt(mean_squared_error(y_test, y_pred_ridge))
+        
+        trials_ridge = Trials()
+        best_ridge = fmin(fn=objective_ridge, space=space_ridge, algo=tpe.suggest, max_evals=20, trials=trials_ridge)
+        
+        print(f"Optimization completed. Best alpha: {best_ridge['alpha']}")
+        
+        # Log the best parameters found
+        mlflow.log_param("best_alpha", best_ridge['alpha'])
+        mlflow.log_param("optimization_trials", len(trials_ridge.trials))
+        mlflow.log_param("optimization_algorithm", "TPE")
+        
+        # Create and train the optimized model
+        model_ridge = Ridge(alpha=best_ridge['alpha'], random_state=42)
+        model_ridge.fit(X_train_full, y_train_full)
+        
+        # Make predictions and evaluate
+        y_pred_ridge = model_ridge.predict(X_test)
+        metrics_ridge = evaluate_model(y_test, y_pred_ridge, model_name)
+        
+        # Log validation metrics manually (since autolog is disabled)
+        mlflow.log_metric("val_rmse", metrics_ridge['rmse'])
+        mlflow.log_metric("val_r2_score", metrics_ridge['r2_score'])
+        
+        # Log model parameters
+        for param_name, param_value in model_ridge.get_params().items():
+            mlflow.log_param(f"model_{param_name}", param_value)
+        
+        # Save model locally for Kestra
+        os.makedirs("model_artifacts", exist_ok=True)
+        
+        output_file = f"model_artifacts/{model_name}_model.bin"
+        with open(output_file, 'wb') as f_out:
+            pickle.dump((dv, model_ridge), f_out)
+        
+        # Log the model to MLflow
+        mlflow.sklearn.log_model(
+            sk_model=model_ridge,
+            artifact_path="model",
+            registered_model_name=model_name
+        )
+        
+        # Log hyperopt trials information
+        try:
+            # Log some statistics about the optimization
+            losses = [trial['result']['loss'] for trial in trials_ridge.trials]
+            mlflow.log_metric("best_cv_loss", min(losses))
+            mlflow.log_metric("mean_cv_loss", np.mean(losses))
+            mlflow.log_metric("std_cv_loss", np.std(losses))
+        except Exception as e:
+            print(f"Warning: Could not log hyperopt statistics: {e}")
+        
+        # Save metrics and run info
+        run_info = {
+            'mlflow_run_id': mlflow.active_run().info.run_id,
+            'mlflow_tracking_uri': mlflow_uri,
+            'validation_metrics': metrics_ridge,
+            'model_type': 'Ridge',
+            'model_uri': f"runs:/{mlflow.active_run().info.run_id}/model",
+            'best_parameters': best_ridge,
+            'optimization_info': {
+                'algorithm': 'TPE',
+                'max_evals': 20,
+                'n_trials_completed': len(trials_ridge.trials)
+            }
+        }
+        
+        with open('model_artifacts/optimized_run_info.json', 'w') as f:
+            json.dump(run_info, f, indent=2)
+        
+        print(f"Model training completed!")
+        print(f"Best alpha: {best_ridge['alpha']}")
+        print(f"Validation RMSE: {metrics_ridge['rmse']:.4f}")
+        print(f"Validation R²: {metrics_ridge['r2_score']:.4f}")
+        print(f"MLflow Run ID: {mlflow.active_run().info.run_id}")
+        print(f"Model saved locally and logged to MLflow")
 
 
 

@@ -16,15 +16,15 @@ def load_run_info(file_path):
         print(f"Error parsing {file_path}: {e}")
         return None
 
-def compare_metrics(linear_metrics, optimized_metrics):
-    """Compare metrics between linear and optimized models"""
+def compare_metrics(raw_metrics, optimized_metrics):
+    """Compare metrics between raw and optimized models"""
     
-    if not linear_metrics or not optimized_metrics:
+    if not raw_metrics or not optimized_metrics:
         print("Error: Missing metrics for comparison")
         return None
     
-    linear_rmse = linear_metrics.get('rmse', float('inf'))
-    linear_r2 = linear_metrics.get('r2_score', -float('inf'))
+    raw_rmse = raw_metrics.get('rmse', float('inf'))
+    raw_r2 = raw_metrics.get('r2_score', -float('inf'))
     
     optimized_rmse = optimized_metrics.get('rmse', float('inf'))
     optimized_r2 = optimized_metrics.get('r2_score', -float('inf'))
@@ -33,17 +33,17 @@ def compare_metrics(linear_metrics, optimized_metrics):
     print("MODEL COMPARISON RESULTS")
     print("="*50)
     
-    print(f"\nLinear Model:")
-    print(f"  RMSE: {linear_rmse:.4f}")
-    print(f"  R² Score: {linear_r2:.4f}")
+    print(f"\nRaw Model:")
+    print(f"  RMSE: {raw_rmse:.4f}")
+    print(f"  R² Score: {raw_r2:.4f}")
     
     print(f"\nOptimized Model:")
     print(f"  RMSE: {optimized_rmse:.4f}")
     print(f"  R² Score: {optimized_r2:.4f}")
     
     # Calculate improvements
-    rmse_improvement = (linear_rmse - optimized_rmse) / linear_rmse * 100
-    r2_improvement = (optimized_r2 - linear_r2) / abs(linear_r2) * 100 if linear_r2 != 0 else 0
+    rmse_improvement = (raw_rmse - optimized_rmse) / raw_rmse * 100
+    r2_improvement = (optimized_r2 - raw_r2) / abs(raw_r2) * 100 if raw_r2 != 0 else 0
     
     print(f"\nImprovement Analysis:")
     print(f"  RMSE improvement: {rmse_improvement:.2f}%")
@@ -54,8 +54,8 @@ def compare_metrics(linear_metrics, optimized_metrics):
     rmse_threshold = 2.0  # Minimum 2% improvement needed
     r2_threshold = 1.0    # Minimum 1% improvement needed
     
-    if optimized_rmse < linear_rmse and rmse_improvement >= rmse_threshold:
-        if optimized_r2 >= linear_r2 or r2_improvement >= r2_threshold:
+    if optimized_rmse < raw_rmse and rmse_improvement >= rmse_threshold:
+        if optimized_r2 >= raw_r2 or r2_improvement >= r2_threshold:
             winner = "optimized"
             reason = f"Lower RMSE ({rmse_improvement:.2f}% improvement) with comparable/better R²"
         else:
@@ -64,17 +64,17 @@ def compare_metrics(linear_metrics, optimized_metrics):
                 winner = "optimized" 
                 reason = f"Significant RMSE improvement ({rmse_improvement:.2f}%) outweighs R² decrease"
             else:
-                winner = "linear"
+                winner = "Raw"
                 reason = f"RMSE improvement ({rmse_improvement:.2f}%) not significant enough to justify R² decrease"
-    elif optimized_r2 > linear_r2 and r2_improvement >= r2_threshold:
-        if optimized_rmse <= linear_rmse or abs(rmse_improvement) <= 1.0:
+    elif optimized_r2 > raw_r2 and r2_improvement >= r2_threshold:
+        if optimized_rmse <= raw_rmse or abs(rmse_improvement) <= 1.0:
             winner = "optimized"
             reason = f"Better R² ({r2_improvement:.2f}% improvement) with comparable/better RMSE"
         else:
-            winner = "linear"
+            winner = "raw"
             reason = f"R² improvement doesn't justify RMSE increase of {abs(rmse_improvement):.2f}%"
     else:
-        winner = "linear"
+        winner = "raw"
         reason = "Optimization did not provide sufficient improvement"
     
     print(f"\nWINNER: {winner.upper()} MODEL")
@@ -88,9 +88,9 @@ def compare_metrics(linear_metrics, optimized_metrics):
             'rmse_improvement_pct': rmse_improvement,
             'r2_improvement_pct': r2_improvement
         },
-        'linear_metrics': {
-            'rmse': linear_rmse,
-            'r2_score': linear_r2
+        'raw_metrics': {
+            'rmse': raw_rmse,
+            'r2_score': raw_r2
         },
         'optimized_metrics': {
             'rmse': optimized_rmse,
@@ -102,38 +102,38 @@ def main():
     """Main comparison function"""
     
     # Load run information from both models
-    linear_info = load_run_info('linear_run_info.json')
+    raw_info = load_run_info('raw_run_info.json')
     optimized_info = load_run_info('optimized_run_info.json')
     
-    if not linear_info:
-        print("Could not load linear model information")
+    if not raw_info:
+        print("Could not load Raw model information")
         return
     
     if not optimized_info:
-        print("Could not load optimized model information, defaulting to linear model")
-        winner_info = linear_info
+        print("Could not load optimized model information, defaulting to Raw model")
+        winner_info = raw_info
         comparison_result = {
-            'winner': 'linear',
+            'winner': 'Raw',
             'reason': 'Optimized model not available',
             'improvements': {'rmse_improvement_pct': 0, 'r2_improvement_pct': 0},
-            'linear_metrics': linear_info.get('validation_metrics', {}),
+            'raw_metrics': raw_info.get('validation_metrics', {}),
             'optimized_metrics': {}
         }
     else:
         # Compare the models
-        linear_metrics = linear_info.get('validation_metrics', {})
+        raw_metrics = raw_info.get('validation_metrics', {})
         optimized_metrics = optimized_info.get('validation_metrics', {})
         
-        comparison_result = compare_metrics(linear_metrics, optimized_metrics)
+        comparison_result = compare_metrics(raw_metrics, optimized_metrics)
         
         if comparison_result is None:
-            print("Comparison failed, defaulting to linear model")
-            winner_info = linear_info
+            print("Comparison failed, defaulting to Raw model")
+            winner_info = raw_info
             comparison_result = {
-                'winner': 'linear',
+                'winner': 'Raw',
                 'reason': 'Comparison failed - using fallback',
                 'improvements': {'rmse_improvement_pct': 0, 'r2_improvement_pct': 0},
-                'linear_metrics': linear_metrics,
+                'raw_metrics': raw_metrics,
                 'optimized_metrics': optimized_metrics
             }
         else:
@@ -141,7 +141,7 @@ def main():
             if comparison_result['winner'] == 'optimized':
                 winner_info = optimized_info
             else:
-                winner_info = linear_info
+                winner_info = raw_info
     
     # Create the final run info for the winning model
     final_run_info = {
@@ -154,11 +154,11 @@ def main():
             'comparison_date': datetime.now().isoformat(),
             'winner': comparison_result['winner'],
             'selection_reason': comparison_result['reason'],
-            'compared_models': ['linear', 'optimized'] if optimized_info else ['linear'],
+            'compared_models': ['raw', 'optimized'] if optimized_info else ['raw'],
             'improvements': comparison_result['improvements']
         },
         'all_metrics': {
-            'linear': comparison_result['linear_metrics'],
+            'raw': comparison_result['raw_metrics'],
             'optimized': comparison_result['optimized_metrics']
         }
     }
