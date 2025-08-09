@@ -135,7 +135,7 @@ if model_selection == 'linear':
             'model_uri': f"runs:/{mlflow.active_run().info.run_id}/model"
         }
         
-        with open('model_artifacts/run_info.json', 'w') as f:
+        with open('model_artifacts/optimized_run_info.json', 'w') as f:
             json.dump(run_info, f, indent=2)
         
         print(f"Model training completed!")

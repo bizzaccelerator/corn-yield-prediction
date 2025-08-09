@@ -101,7 +101,7 @@ with mlflow.start_run(run_name="linear-regression-corn-yield"):
         'model_uri': f"runs:/{mlflow.active_run().info.run_id}/model"
     }
     
-    with open('model_artifacts/run_info.json', 'w') as f:
+    with open('model_artifacts/linear_run_info.json', 'w') as f:
         json.dump(run_info, f, indent=2)
     
     print(f"Model training completed!")
