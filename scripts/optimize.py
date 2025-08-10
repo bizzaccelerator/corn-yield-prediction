@@ -83,7 +83,10 @@ def evaluate_model(y_test, y_pred, model_name):
 # The objective functions are: 
 def objective_ridge(params):
     alpha = params['alpha']
-    model = Ridge(alpha=alpha, random_state=42)    
+    model = Pipeline([
+        ('scaler', StandardScaler()),
+        ('regressor', Ridge(alpha=alpha, random_state=42))
+    ])
     neg_mse = cross_val_score(model, X_train_full, y_train_full, cv=5, scoring="neg_mean_squared_error")
     return {'loss': -np.mean(neg_mse), 'status': STATUS_OK}
 
@@ -177,9 +180,9 @@ elif model_selection == 'ridge':
         
         # Create and train the optimized model
         model_ridge = Pipeline([
-            ('scaler', StandardScaler()),                                             # Step 1: scale features
-            ('ridge', Ridge(alpha=best_ridge['alpha'], random_state=42))              # Step 2: Ridge regression
-            ])
+            ('scaler', StandardScaler()),
+            ('regressor', Ridge(alpha=best_ridge['alpha'], random_state=42))
+        ])
         model_ridge.fit(X_train_full, y_train_full)
         
         # Make predictions and evaluate
