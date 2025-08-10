@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import mlflow
 import mlflow.sklearn
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 import os
 import pickle
 import json
@@ -64,7 +66,10 @@ with mlflow.start_run(run_name="Ridge-regression-corn-yield"):
     mlflow.log_param("n_train_samples", X_train.shape[0])
     mlflow.log_param("n_val_samples", X_val.shape[0])
     
-    ridge = Ridge()
+    ridge = Pipeline([
+        ('scaler', StandardScaler()),   # Step 1: scale features
+        ('ridge', Ridge())              # Step 2: Ridge regression
+        ])
     ridge.fit(X_train, y_train)
     
     # The trained model is used to predict the values in the validation dataset:

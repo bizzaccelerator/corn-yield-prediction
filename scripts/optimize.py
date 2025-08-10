@@ -5,6 +5,8 @@ from sklearn.metrics import mean_squared_error, r2_score
 from scipy.sparse import hstack, csr_matrix
 import mlflow
 import mlflow.sklearn
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 import pandas as pd
 import numpy as np
 import os, pickle, json
@@ -174,7 +176,10 @@ elif model_selection == 'ridge':
         mlflow.log_param("optimization_algorithm", "TPE")
         
         # Create and train the optimized model
-        model_ridge = Ridge(alpha=best_ridge['alpha'], random_state=42)
+        model_ridge = Pipeline([
+            ('scaler', StandardScaler()),                                             # Step 1: scale features
+            ('ridge', Ridge(alpha=best_ridge['alpha'], random_state=42))              # Step 2: Ridge regression
+            ])
         model_ridge.fit(X_train_full, y_train_full)
         
         # Make predictions and evaluate
