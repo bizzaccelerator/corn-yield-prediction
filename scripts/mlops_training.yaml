@@ -19,6 +19,7 @@ inputs:
       - linear
       - ridge
       - lasso
+      - gradientboostingregressor
 
 variables:
   mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
@@ -398,6 +399,118 @@ tasks:
         - pip install mlflow google-cloud-storage pandas
       inputFiles:
         run_info.json: "{{ outputs.compare_between_ridge_and_optimized_models.outputFiles['model_artifacts/final_run_info.json'] }}"
+      commands:
+        - python model_registry.py
+      outputFiles:
+        - "*.json"
+
+  - id: if_gradientboostingregressor
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{inputs.model_selection == 'gradientboostingregressor'}}"
+    then:
+    - id: train_gbr_model
+      type: io.kestra.plugin.scripts.python.Commands
+      containerImage: ghcr.io/kestra-io/pydata:latest
+      description: Training the ridge model 
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      namespaceFiles:
+        enabled: true
+        include:
+          - train_gbt.py
+      env:
+        # MLflow configuration - using your Cloud Run URL
+        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+        # Optional: Set experiment name
+        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+        MODEL_NAME: "{{ vars.model_name}}"
+        MODEL_TYPE: "{{ inputs.model_selection}}"
+      beforeCommands:
+        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage
+      inputFiles:
+        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
+        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
+        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+      commands:
+        - python train_gbt.py
+      outputFiles:
+        - "model_artifacts/**"
+        - "*.pkl"
+        - "*.json"
+    
+    - id: optimize_gb_regressor     
+      type: io.kestra.plugin.scripts.python.Commands     
+      containerImage: ghcr.io/kestra-io/pydata:latest     
+      description: Optimizer for Ridge regressor model      
+      taskRunner:       
+        type: io.kestra.plugin.core.runner.Process     
+      namespaceFiles:       
+        enabled: true       
+        include:         
+          - optimize.py     
+      env:       
+        # MLflow configuration - using your Cloud Run URL       
+        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"       
+        # Optional: Set experiment name       
+        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"       
+        MODEL_NAME: "{{ vars.model_name}}"       
+        MODEL_TYPE: "{{ inputs.model_selection}}"     
+      beforeCommands:       
+        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy     
+      inputFiles:       
+        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"       
+        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"       
+        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
+        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
+        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
+        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
+        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"     
+      commands:       
+        - python optimize.py     
+      outputFiles:       
+        - "model_artifacts/**"
+        - "*.pkl"
+        - "*.json"      
+
+    - id: compare_between_gbr_and_optimized_models
+      type: io.kestra.plugin.scripts.python.Commands
+      containerImage: ghcr.io/kestra-io/pydata:latest
+      description: Compare linear and optimized models to select the best one
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      namespaceFiles:
+        enabled: true
+        include:
+          - compare_models.py
+      inputFiles:
+        raw_run_info.json: "{{ outputs.train_gbr_model.outputFiles['model_artifacts/gbt_run_info.json'] }}"
+        optimized_run_info.json: "{{ outputs.optimize_gb_regressor.outputFiles['model_artifacts/optimized_run_info.json'] }}"
+      commands:
+        - python compare_models.py
+      outputFiles:
+        - "model_artifacts/**"
+        - "*.pkl"
+        - "*.json"
+    
+    - id: gbr_registry_management
+      type: io.kestra.plugin.scripts.python.Commands
+      containerImage: ghcr.io/kestra-io/pydata:latest
+      description: Manage model versions and transitions in MLflow registry
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      namespaceFiles:
+        enabled: true
+        include:
+          - model_registry.py
+      env:
+        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+        MODEL_NAME: "{{ vars.model_name}}"
+      beforeCommands:
+        - pip install mlflow google-cloud-storage pandas
+      inputFiles:
+        run_info.json: "{{ outputs.compare_between_gbr_and_optimized_models.outputFiles['model_artifacts/final_run_info.json'] }}"
       commands:
         - python model_registry.py
       outputFiles:
