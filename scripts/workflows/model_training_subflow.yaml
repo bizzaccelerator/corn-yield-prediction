@@ -111,28 +111,6 @@ tasks:
       - "*.pkl"
       - "*.json"
 
-  - id: registry_management
-    type: io.kestra.plugin.scripts.python.Commands
-    containerImage: ghcr.io/kestra-io/pydata:latest
-    description: "Register {{ inputs.model_type }} model in MLflow registry"
-    taskRunner:
-      type: io.kestra.plugin.core.runner.Process
-    namespaceFiles:
-      enabled: true
-      include:
-        - model_registry.py
-    env:
-      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
-      MODEL_NAME: "{{ vars.model_name }}"
-    beforeCommands:
-      - pip install mlflow google-cloud-storage pandas
-    inputFiles:
-      run_info.json: "{{ outputs.compare_models.outputFiles['model_artifacts/final_run_info.json'] }}"
-    commands:
-      - python model_registry.py
-    outputFiles:
-      - "*.json"
-
 outputs:
   - id: final_run_info_file
     type: STRING

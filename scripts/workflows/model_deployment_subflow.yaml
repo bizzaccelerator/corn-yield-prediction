@@ -25,10 +25,10 @@ variables:
   model_name: "corn-yield-predictor"
 
 tasks:
-  - id: fetch_production_model
+  - id: fetch_and_compare_models
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
-    description: Fetch the latest production model from MLflow and evaluate performance
+    description: Fetch production model and compare with candidate model
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
     namespaceFiles:
@@ -43,34 +43,50 @@ tasks:
     env:
       MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
       MODEL_NAME: "{{ vars.model_name }}"
-      TARGET_STAGE: "{{ inputs.target_stage }}"
-      THRESHOLD: "{{ inputs.model_performance_threshold }}"
+      CANDIDATE_RUN_INFO: "final_run_info.json"
+      METRIC: "rmse"
+      COMPARISON_THRESHOLD: "0.05"
       FORCE_DEPLOYMENT: "{{ inputs.force_deployment }}"
     commands:
       - python model_fetch.py
     outputFiles:
-      - "*.bin"
-      - "model_metadata.json"
       - "deployment_decision.json"
 
   - id: deployment_decision_gate
     type: io.kestra.plugin.core.flow.If
-    condition: "{{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') }}"
+    condition: "{{ read(outputs.fetch_and_compare_models.outputFiles[\"deployment_decision.json\"]) | jq(\".should_deploy\") | first }}"
     then:
+      - id: register_model_in_mlflow
+        type: io.kestra.plugin.scripts.python.Commands
+        containerImage: ghcr.io/kestra-io/pydata:latest
+        description: Register candidate model in MLflow and promote to Production
+        taskRunner:
+          type: io.kestra.plugin.core.runner.Process
+        namespaceFiles:
+          enabled: true
+          include:
+            - model_registry.py
+        env:
+          MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+          MODEL_NAME: "{{ vars.model_name }}"
+        beforeCommands:
+          - pip install mlflow google-cloud-storage pandas
+        inputFiles:
+          run_info.json: "{{ inputs.final_run_info_file_path }}"
+        commands:
+          - python model_registry.py
+        outputFiles:
+          - "*.json"
+
       - id: build_docker_image
         type: io.kestra.plugin.scripts.shell.Commands
         description: Build Docker image for the model service
         inputFiles:
-          model.bin: "{{ outputs.fetch_production_model.outputFiles['corn-yield-predictor_model.bin'] }}"
-          model_metadata.json: "{{ outputs.fetch_production_model.outputFiles['model_metadata.json'] }}"
+          model_metadata.json: "{{ outputs.register_model_in_mlflow.outputFiles['model_metadata.json'] }}"
         commands:
         - |
           # Create app directory
           mkdir -p app
-          
-          # Move model files to app directory
-          mv model.bin app/
-          mv model_metadata.json app/
           
           # Create requirements.txt
           cat > app/requirements.txt << EOF
@@ -80,34 +96,43 @@ tasks:
           scikit-learn==1.7.1
           waitress==2.0.0
           google-cloud-logging==3.8.0
+          mlflow==3.1.4
           EOF
 
-          # Create main.py (Flask app)
+          # Create main.py (Flask app) - Updated to load from MLflow
           cat > app/main.py << 'EOF'
           import os
           import json
           import logging
-          import pickle
           from flask import Flask, request, jsonify
           import pandas as pd
           import numpy as np
-
-          # The model used is referred
-          model_file = 'model.bin'
+          import mlflow
+          import mlflow.sklearn
+          from mlflow.tracking import MlflowClient
 
           # Setup logging
           logging.basicConfig(level=logging.INFO)
           logger = logging.getLogger(__name__)
 
-          # Load model and metadata at startup
+          # Load model metadata
+          with open('model_metadata.json', 'r') as f:
+              metadata = json.load(f)
+
+          # Setup MLflow
+          mlflow.set_tracking_uri(metadata['mlflow_tracking_uri'])
+          client = MlflowClient()
+
+          # Load model from MLflow
           try:
-              with open(model_file, 'rb') as f_in:
-                  dv, model = pickle.load(f_in)
-                  
-              with open('model_metadata.json', 'r') as f:
-                  metadata = json.load(f)
-                  
-              logger.info(f"Model loaded: {metadata['model_name']} v{metadata['model_version']}")
+              model_name = metadata['model_name']
+              model_stage = metadata.get('model_stage', 'Production')
+              
+              logger.info(f"Loading model: {model_name} from stage: {model_stage}")
+              model_uri = f"models:/{model_name}/{model_stage}"
+              model = mlflow.sklearn.load_model(model_uri)
+              
+              logger.info(f"Model loaded successfully: {model_name} v{metadata['model_version']}")
           except Exception as e:
               logger.error(f"Failed to load model: {e}")
               raise
@@ -116,19 +141,38 @@ tasks:
           app = Flask('yield')
 
           @app.route('/predict', methods=['POST'])
-          # Function that calculates the target variable:
           def predict():
-              farmer = request.get_json()
-              X = dv.transform([farmer])
-              y_pred = model.predict(X)[0]
-              result = {
-                  'Yield prediction': y_pred,
-              }
-              return jsonify(result)
+              try:
+                  farmer_data = request.get_json()
+                  
+                  # Convert to DataFrame for prediction
+                  df = pd.DataFrame([farmer_data])
+                  y_pred = model.predict(df)[0]
+                  
+                  result = {
+                      'yield_prediction': float(y_pred),
+                      'model_version': metadata['model_version'],
+                      'model_name': metadata['model_name']
+                  }
+                  return jsonify(result)
+              except Exception as e:
+                  logger.error(f"Prediction error: {e}")
+                  return jsonify({'error': str(e)}), 500
+
+          @app.route('/health', methods=['GET'])
+          def health():
+              return jsonify({
+                  'status': 'healthy',
+                  'model_name': metadata['model_name'],
+                  'model_version': metadata['model_version']
+              })
 
           if __name__ == "__main__":
               app.run(debug=True, host='0.0.0.0', port=9696)
           EOF
+
+          # Move metadata to app directory
+          cp model_metadata.json app/
 
           # Create Dockerfile
           cat > Dockerfile << EOF
@@ -168,7 +212,7 @@ tasks:
         inputFiles:
           Dockerfile: "{{ outputs.build_docker_image.outputFiles['Dockerfile'] }}"
           app_archive: "{{ outputs.build_docker_image.outputFiles['app.tar.gz'] }}"
-          model_metadata.json: "{{ outputs.fetch_production_model.outputFiles['model_metadata.json'] }}"
+          model_metadata.json: "{{ outputs.register_model_in_mlflow.outputFiles['model_metadata.json'] }}"
           service_account_key.json: "{{ kv('GCP_SERVICE_ACCOUNT_KEY') }}"
         env:
           PROJECT_ID: "{{ kv('GCP_PROJECT_ID') }}"
@@ -289,12 +333,12 @@ tasks:
     else:
       - id: skip_deployment
         type: io.kestra.plugin.core.log.Log
-        message: "Deployment skipped - should_deploy is false"
+        message: "Deployment skipped - candidate model not better than production or force_deployment is false"
 
 outputs:
   - id: deployment_result
     type: JSON
-    value: "{{ outputs.fetch_production_model.outputFiles['deployment_decision.json'] if outputs.fetch_production_model is defined else '{\"should_deploy\": false}' }}"
+    value: "{{ outputs.fetch_and_compare_models.outputFiles['deployment_decision.json'] if outputs.fetch_and_compare_models is defined else '{\"promote_to_prod\": false}' }}"
   - id: build_info
     type: JSON
     value: "{{ outputs.build_and_push_to_gcr.outputFiles['build_info.json'] if outputs.build_and_push_to_gcr is defined else '{}' }}"

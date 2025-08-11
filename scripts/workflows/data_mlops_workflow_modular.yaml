@@ -68,7 +68,7 @@ tasks:
       - "data_splits/*.csv"
       - "vectorizer.pkl"
 
-  # Training subflow - handles all model types
+  # Training subflow - handles all model types (NO registry management)
   - id: train_selected_model
     type: io.kestra.plugin.core.flow.Subflow
     namespace: corn_mlops_flow
@@ -82,12 +82,12 @@ tasks:
       val_labels_file: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
       vectorizer_file_path: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
 
-  # Deployment subflow - handles deployment decision and process
+  # Deployment subflow - handles comparison, registration, and deployment
   - id: deploy_selected_model
     type: io.kestra.plugin.core.flow.Subflow
     namespace: corn_mlops_flow
     flowId: model_deployment_subflow
-    description: "Deploy the selected {{ inputs.model_selection }} model"
+    description: "Compare, register and deploy the selected {{ inputs.model_selection }} model"
     inputs:
       model_performance_threshold: "{{ inputs.model_performance_threshold }}"
       target_stage: "{{ inputs.target_stage }}"
