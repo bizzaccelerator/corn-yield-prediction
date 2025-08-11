@@ -1,0 +1,113 @@
+id: data_mlops_workflow_modular
+namespace: corn_mlops_flow
+
+inputs:
+  - id: model_performance_threshold
+    type: FLOAT
+    defaults: 0.7
+  - id: target_stage
+    type: STRING
+    defaults: Production
+  - id: force_deployment
+    type: BOOLEAN
+    defaults: false
+  - id: model_selection
+    type: SELECT
+    displayName: "Select the model you are interested:"
+    defaults: linear
+    values:
+      - linear
+      - ridge
+      - lasso
+      - gbr
+
+variables:
+  mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
+  gcp_project: "corn-yield-prediction-kenia"
+  experiment_name: "corn-yield-predictors"
+  model_name: "corn-yield-predictor"
+
+tasks:
+  - id: download_dataset
+    type: io.kestra.plugin.scripts.python.Script
+    description: Download corn farming dataset from Kaggle using authenticated API
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    env:
+      KAGGLE_USERNAME: "{{ kv('KAGGLE_USERNAME') }}"
+      KAGGLE_KEY: "{{ kv('KAGGLE_KEY') }}"
+    beforeCommands:
+    - pip install kagglehub
+    - pip install kaggle 
+    outputFiles:
+      - "corn_data.csv"
+    script: |
+      import kaggle
+      kaggle.api.authenticate()
+      handle = "japondo/corn-farming-data"
+      print("Los archivos a descargar son: ", kaggle.api.dataset_list_files(handle).files)
+      kaggle.api.dataset_download_files(handle, path=".", unzip=True)
+
+  - id: clean_split
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: Clean the dataset and preparing for training stage
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - clean.py
+    beforeCommands:
+      - pip install pandas scikit-learn 
+    inputFiles:
+      corn.csv: "{{ outputs.download_dataset.outputFiles['corn_data.csv'] }}"
+    commands:
+      - python clean.py
+    outputFiles:
+      - "data_splits/*.csv"
+      - "vectorizer.pkl"
+
+  # Training subflow - handles all model types
+  - id: train_selected_model
+    type: io.kestra.plugin.core.flow.Subflow
+    namespace: corn_mlops_flow
+    flowId: model_training_subflow
+    description: "Train and optimize {{ inputs.model_selection }} model"
+    inputs:
+      model_type: "{{ inputs.model_selection }}"
+      train_data_file: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
+      train_labels_file: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
+      val_data_file: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+      val_labels_file: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+      vectorizer_file_path: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+
+  # Deployment subflow - handles deployment decision and process
+  - id: deploy_selected_model
+    type: io.kestra.plugin.core.flow.Subflow
+    namespace: corn_mlops_flow
+    flowId: model_deployment_subflow
+    description: "Deploy the selected {{ inputs.model_selection }} model"
+    inputs:
+      model_performance_threshold: "{{ inputs.model_performance_threshold }}"
+      target_stage: "{{ inputs.target_stage }}"
+      force_deployment: "{{ inputs.force_deployment }}"
+      vectorizer_file_path: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+      final_run_info_file_path: "{{ outputs.train_selected_model.outputs.final_run_info_file }}"
+
+outputs:
+  - id: selected_model_type
+    type: STRING
+    value: "{{ inputs.model_selection }}"
+  
+  - id: training_result
+    type: JSON
+    value: "{{ outputs.train_selected_model.outputs }}"
+  
+  - id: deployment_status
+    type: JSON
+    value: "{{ outputs.deploy_selected_model.outputs.deployment_result }}"
+  
+  - id: build_info
+    type: JSON
+    value: "{{ outputs.deploy_selected_model.outputs.build_info }}"

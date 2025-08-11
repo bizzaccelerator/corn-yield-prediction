@@ -364,7 +364,7 @@ elif model_selection == 'lasso':
         print(f"Model saved locally and logged to MLflow")
 
 
-elif model_selection == 'gradientboostingregressor':
+elif model_selection == 'gbr':
 
     # DISABLE autologging for hyperopt optimization to avoid conflicts
     mlflow.sklearn.autolog(disable=True)

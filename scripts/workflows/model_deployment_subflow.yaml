@@ -1,0 +1,300 @@
+id: model_deployment_subflow
+namespace: corn_mlops_flow
+
+description: Reusable deployment subflow for ML models
+
+inputs:
+  - id: model_performance_threshold
+    type: FLOAT
+    defaults: 0.7
+  - id: target_stage
+    type: STRING
+    defaults: Production
+  - id: force_deployment
+    type: BOOLEAN
+    defaults: false
+  - id: vectorizer_file_path
+    type: STRING
+    description: Path to the vectorizer pickle file
+  - id: final_run_info_file_path
+    type: STRING
+    description: Path to the final run info JSON file
+
+variables:
+  mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
+  model_name: "corn-yield-predictor"
+
+tasks:
+  - id: fetch_production_model
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: Fetch the latest production model from MLflow and evaluate performance
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - model_fetch.py
+    inputFiles:
+      dict_vectorizer: "{{ inputs.vectorizer_file_path }}"
+      final_run_info.json: "{{ inputs.final_run_info_file_path }}"
+    beforeCommands:
+      - pip install mlflow pandas numpy scikit-learn
+    env:
+      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+      MODEL_NAME: "{{ vars.model_name }}"
+      TARGET_STAGE: "{{ inputs.target_stage }}"
+      THRESHOLD: "{{ inputs.model_performance_threshold }}"
+      FORCE_DEPLOYMENT: "{{ inputs.force_deployment }}"
+    commands:
+      - python model_fetch.py
+    outputFiles:
+      - "*.bin"
+      - "model_metadata.json"
+      - "deployment_decision.json"
+
+  - id: deployment_decision_gate
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ read(outputs.fetch_production_model.outputFiles['deployment_decision.json']) | jq('.should_deploy') }}"
+    then:
+      - id: build_docker_image
+        type: io.kestra.plugin.scripts.shell.Commands
+        description: Build Docker image for the model service
+        inputFiles:
+          model.bin: "{{ outputs.fetch_production_model.outputFiles['corn-yield-predictor_model.bin'] }}"
+          model_metadata.json: "{{ outputs.fetch_production_model.outputFiles['model_metadata.json'] }}"
+        commands:
+        - |
+          # Create app directory
+          mkdir -p app
+          
+          # Move model files to app directory
+          mv model.bin app/
+          mv model_metadata.json app/
+          
+          # Create requirements.txt
+          cat > app/requirements.txt << EOF
+          flask==2.3.3
+          pandas==2.3.1
+          numpy==2.2.6
+          scikit-learn==1.7.1
+          waitress==2.0.0
+          google-cloud-logging==3.8.0
+          EOF
+
+          # Create main.py (Flask app)
+          cat > app/main.py << 'EOF'
+          import os
+          import json
+          import logging
+          import pickle
+          from flask import Flask, request, jsonify
+          import pandas as pd
+          import numpy as np
+
+          # The model used is referred
+          model_file = 'model.bin'
+
+          # Setup logging
+          logging.basicConfig(level=logging.INFO)
+          logger = logging.getLogger(__name__)
+
+          # Load model and metadata at startup
+          try:
+              with open(model_file, 'rb') as f_in:
+                  dv, model = pickle.load(f_in)
+                  
+              with open('model_metadata.json', 'r') as f:
+                  metadata = json.load(f)
+                  
+              logger.info(f"Model loaded: {metadata['model_name']} v{metadata['model_version']}")
+          except Exception as e:
+              logger.error(f"Failed to load model: {e}")
+              raise
+
+          # Instantiating the app
+          app = Flask('yield')
+
+          @app.route('/predict', methods=['POST'])
+          # Function that calculates the target variable:
+          def predict():
+              farmer = request.get_json()
+              X = dv.transform([farmer])
+              y_pred = model.predict(X)[0]
+              result = {
+                  'Yield prediction': y_pred,
+              }
+              return jsonify(result)
+
+          if __name__ == "__main__":
+              app.run(debug=True, host='0.0.0.0', port=9696)
+          EOF
+
+          # Create Dockerfile
+          cat > Dockerfile << EOF
+          FROM python:3.11-slim
+
+          WORKDIR /app
+          
+          # Copy requirements and install dependencies
+          COPY app/requirements.txt .
+          RUN pip install --no-cache-dir -r requirements.txt
+          
+          # Copy application files
+          COPY app/ .
+          
+          # Expose the application port
+          EXPOSE 9696
+
+          # Set the default command to run the application
+          CMD ["waitress-serve", "--listen=0.0.0.0:9696", "main:app"]
+          EOF
+          
+          # Archive the app folder
+          tar -czf app.tar.gz app/
+
+          echo "Docker files created successfully"
+        
+        outputFiles:
+          - "Dockerfile"
+          - "app/**"
+          - "app.tar.gz"
+        
+      - id: build_and_push_to_gcr
+        type: io.kestra.plugin.scripts.shell.Commands
+        description: Build Docker image using cloudbuild.yaml
+        docker:
+          image: google/cloud-sdk:alpine
+        inputFiles:
+          Dockerfile: "{{ outputs.build_docker_image.outputFiles['Dockerfile'] }}"
+          app_archive: "{{ outputs.build_docker_image.outputFiles['app.tar.gz'] }}"
+          model_metadata.json: "{{ outputs.fetch_production_model.outputFiles['model_metadata.json'] }}"
+          service_account_key.json: "{{ kv('GCP_SERVICE_ACCOUNT_KEY') }}"
+        env:
+          PROJECT_ID: "{{ kv('GCP_PROJECT_ID') }}"
+          REGION: "{{ kv('GCP_REGION') }}"
+          SERVICE_NAME: "corn-predictor-service"
+        commands:
+          - |
+              set -e
+              
+              echo "=== Building with cloudbuild.yaml method ==="
+              
+              echo "1. Setup..."
+              gcloud auth activate-service-account --key-file=service_account_key.json
+              gcloud config set project $PROJECT_ID
+              apk add --no-cache jq
+              tar -xzf app_archive
+              
+              MODEL_VERSION=$(jq -r '.model_version // "1"' model_metadata.json)
+              TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+              
+              echo "Project: $PROJECT_ID"
+              echo "Service: $SERVICE_NAME"  
+              echo "Version: $MODEL_VERSION"
+              echo "Timestamp: $TIMESTAMP"
+              
+              echo "2. Creating cloudbuild.yaml..."
+              cat > cloudbuild.yaml << EOF
+              steps:
+              # Build the Docker image
+              - name: 'gcr.io/cloud-builders/docker'
+                args: 
+                  - 'build'
+                  - '-t'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+                  - '.'
+              
+              # Tag with version
+              - name: 'gcr.io/cloud-builders/docker'
+                args: 
+                  - 'tag'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION'
+              
+              # Tag with timestamp  
+              - name: 'gcr.io/cloud-builders/docker'
+                args:
+                  - 'tag' 
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+                  - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
+              
+              # Push all images
+              images:
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION' 
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
+              
+              timeout: '1200s'
+              
+              options:
+                # Disable log streaming to avoid permission issues
+                logging: CLOUD_LOGGING_ONLY
+              EOF
+              
+              echo "3. Starting build with config file..."
+              BUILD_ID=$(gcloud builds submit \
+                --config=cloudbuild.yaml \
+                --project=$PROJECT_ID \
+                --async \
+                --format="value(name)" | sed 's|.*/||')
+              
+              echo "Build ID: $BUILD_ID"
+              
+              echo "4. Monitoring build..."
+              while true; do
+                  STATUS=$(gcloud builds describe $BUILD_ID --project=$PROJECT_ID --format="value(status)")
+                  echo "Build status: $STATUS"
+                  
+                  case $STATUS in
+                      "SUCCESS")
+                          echo "Build successful!"
+                          break
+                          ;;
+                      "FAILURE"|"TIMEOUT"|"CANCELLED"|"INTERNAL_ERROR")
+                          echo "Build failed: $STATUS"
+                          exit 1
+                          ;;
+                      *)
+                          sleep 20
+                          ;;
+                  esac
+              done
+              
+              echo "5. Creating output..."
+              cat > build_info.json << EOF
+              {
+                "build_status": "SUCCESS",
+                "build_id": "$BUILD_ID", 
+                "project_id": "$PROJECT_ID",
+                "service_name": "$SERVICE_NAME",
+                "model_version": "$MODEL_VERSION",
+                "timestamp": "$TIMESTAMP",
+                "images": {
+                  "latest": "gcr.io/$PROJECT_ID/$SERVICE_NAME:latest",
+                  "version": "gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION",
+                  "timestamp": "gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP"
+                },
+                "console_url": "https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
+              }
+              EOF
+              
+              echo "Process completed!"
+              cat build_info.json
+              
+        outputFiles:
+          - "build_info.json"
+          - "cloudbuild.yaml"
+      
+    else:
+      - id: skip_deployment
+        type: io.kestra.plugin.core.log.Log
+        message: "Deployment skipped - should_deploy is false"
+
+outputs:
+  - id: deployment_result
+    type: JSON
+    value: "{{ outputs.fetch_production_model.outputFiles['deployment_decision.json'] if outputs.fetch_production_model is defined else '{\"should_deploy\": false}' }}"
+  - id: build_info
+    type: JSON
+    value: "{{ outputs.build_and_push_to_gcr.outputFiles['build_info.json'] if outputs.build_and_push_to_gcr is defined else '{}' }}"

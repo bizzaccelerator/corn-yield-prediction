@@ -1,0 +1,142 @@
+id: model_training_subflow
+namespace: corn_mlops_flow
+
+description: Reusable training subflow for ML models
+
+inputs:
+  - id: model_type
+    type: STRING
+    description: Type of model to train (linear, ridge, lasso, gbr)
+  - id: train_data_file
+    type: STRING
+    description: Path to training data X file
+  - id: train_labels_file
+    type: STRING
+    description: Path to training data y file
+  - id: val_data_file
+    type: STRING
+    description: Path to validation data X file
+  - id: val_labels_file
+    type: STRING
+    description: Path to validation data y file
+  - id: vectorizer_file_path
+    type: STRING
+    description: Path to vectorizer pickle file
+
+variables:
+  mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
+  experiment_name: "corn-yield-predictors"
+  model_name: "corn-yield-predictor"
+
+tasks:
+  - id: train_base_model
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: "Training the {{ inputs.model_type }} model"
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - "train_{{ inputs.model_type }}.py"
+    env:
+      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+      MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+      MODEL_NAME: "{{ vars.model_name }}"
+      MODEL_TYPE: "{{ inputs.model_type }}"
+    beforeCommands:
+      - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage
+    inputFiles:
+      X_train.csv: "{{ inputs.train_data_file }}"
+      y_train.csv: "{{ inputs.train_labels_file }}"
+      X_val.csv: "{{ inputs.val_data_file }}"
+      y_val.csv: "{{ inputs.val_labels_file }}"
+      dict_vectorizer: "{{ inputs.vectorizer_file_path }}"
+    commands:
+      - "python train_{{ inputs.model_type }}.py"
+    outputFiles:
+      - "model_artifacts/**"
+      - "*.pkl"
+      - "*.json"
+
+  - id: optimize_model
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: "Optimize {{ inputs.model_type }} model with hyperparameter tuning"
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - optimize.py
+    env:
+      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+      MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+      MODEL_NAME: "{{ vars.model_name }}"
+      MODEL_TYPE: "{{ inputs.model_type }}"
+    beforeCommands:
+      - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy
+    inputFiles:
+      X_train.csv: "{{ inputs.train_data_file }}"
+      y_train.csv: "{{ inputs.train_labels_file }}"
+      X_val.csv: "{{ inputs.val_data_file }}"
+      y_val.csv: "{{ inputs.val_labels_file }}"
+      X_test.csv: "{{ inputs.val_data_file }}"  # Using validation as test for now
+      y_test.csv: "{{ inputs.val_labels_file }}"
+      dict_vectorizer: "{{ inputs.vectorizer_file_path }}"
+    commands:
+      - python optimize.py
+    outputFiles:
+      - "model_artifacts/**"
+      - "*.pkl"
+      - "*.json"
+
+  - id: compare_models
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: "Compare base and optimized {{ inputs.model_type }} models"
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - compare_models.py
+    inputFiles:
+      raw_run_info.json: "{{ outputs.train_base_model.outputFiles['model_artifacts/' + inputs.model_type + '_run_info.json'] }}"
+      optimized_run_info.json: "{{ outputs.optimize_model.outputFiles['model_artifacts/optimized_run_info.json'] }}"
+    commands:
+      - python compare_models.py
+    outputFiles:
+      - "model_artifacts/**"
+      - "*.pkl"
+      - "*.json"
+
+  - id: registry_management
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: "Register {{ inputs.model_type }} model in MLflow registry"
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - model_registry.py
+    env:
+      MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+      MODEL_NAME: "{{ vars.model_name }}"
+    beforeCommands:
+      - pip install mlflow google-cloud-storage pandas
+    inputFiles:
+      run_info.json: "{{ outputs.compare_models.outputFiles['model_artifacts/final_run_info.json'] }}"
+    commands:
+      - python model_registry.py
+    outputFiles:
+      - "*.json"
+
+outputs:
+  - id: final_run_info_file
+    type: STRING
+    value: "{{ outputs.compare_models.outputFiles['model_artifacts/final_run_info.json'] }}"
+  - id: model_type
+    type: STRING
+    value: "{{ inputs.model_type }}"

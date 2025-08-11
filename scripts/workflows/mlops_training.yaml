@@ -19,13 +19,14 @@ inputs:
       - linear
       - ridge
       - lasso
-      - gradientboostingregressor
+      - gbr
 
 variables:
   mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
   gcp_project: "corn-yield-prediction-kenia"
   experiment_name: "corn-yield-predictors"
   model_name: "corn-yield-predictor"
+  algorithm: "{{ inputs.model_selection}}"
 
 tasks:
   - id: download_dataset
@@ -515,6 +516,59 @@ tasks:
         - python model_registry.py
       outputFiles:
         - "*.json"
+  
+  - id: select_model_info
+    type: io.kestra.plugin.core.flow.Switch
+    value: "{{ inputs.model_selection }}"
+    cases:
+      linear:
+        - id: get_linear_info
+          type: io.kestra.plugin.scripts.python.Script
+          inputFiles:
+            source_run_info.json: "{{ outputs.linear_registry_management.outputFiles['run_info.json'] }}"
+          script: |
+            import shutil
+            shutil.copy("source_run_info.json", "final_run_info.json")
+            print("Linear model info selected")
+          outputFiles:
+            - final_run_info.json
+      
+      lasso:
+        - id: get_lasso_info
+          type: io.kestra.plugin.scripts.python.Script
+          inputFiles:
+            source_run_info.json: "{{ outputs.lasso_registry_management.outputFiles['run_info.json'] }}"
+          script: |
+            import shutil
+            shutil.copy("source_run_info.json", "final_run_info.json")
+            print("Lasso model info selected")
+          outputFiles:
+            - final_run_info.json
+      
+      ridge:
+        - id: get_ridge_info
+          type: io.kestra.plugin.scripts.python.Script
+          inputFiles:
+            source_run_info.json: "{{ outputs.ridge_registry_management.outputFiles['run_info.json'] }}"
+          script: |
+            import shutil
+            shutil.copy("source_run_info.json", "final_run_info.json")
+            print("Ridge model info selected")
+          outputFiles:
+            - final_run_info.json
+      
+      gbr:
+        - id: get_gbr_info
+          type: io.kestra.plugin.scripts.python.Script
+          inputFiles:
+            source_run_info.json: "{{ outputs.gbr_registry_management.outputFiles['run_info.json'] }}"
+          script: |
+            import shutil
+            shutil.copy("source_run_info.json", "final_run_info.json")
+            print("GBR model info selected")
+          outputFiles:
+            - final_run_info.json
+
 
   - id: fetch_production_model
     type: io.kestra.plugin.scripts.python.Commands
@@ -528,6 +582,7 @@ tasks:
         - model_fetch.py
     inputFiles:
       dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+      final_run_info.json: "{{ outputs.select_model_output.outputFiles['final_run_info.json'] }}"
     beforeCommands:
       - pip install mlflow pandas numpy scikit-learn
     env:
