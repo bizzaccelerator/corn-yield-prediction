@@ -338,7 +338,8 @@ tasks:
 outputs:
   - id: deployment_result
     type: JSON
-    value: "{{ outputs.fetch_and_compare_models.outputFiles['deployment_decision.json'] if outputs.fetch_and_compare_models is defined else '{\"promote_to_prod\": false}' }}"
+    value: "{{ read(outputs.fetch_and_compare_models.outputFiles['deployment_decision.json']) }}"
+  
   - id: build_info
     type: JSON
-    value: "{{ outputs.build_and_push_to_gcr.outputFiles['build_info.json'] if outputs.build_and_push_to_gcr is defined else '{}' }}"
+    value: "{{ read(outputs.build_and_push_to_gcr.outputFiles['build_info.json']) }}"
