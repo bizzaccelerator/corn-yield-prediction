@@ -172,7 +172,7 @@ elif model_selection == 'ridge':
     mlflow.sklearn.autolog(disable=True)
     
     # Start an MLflow run
-    with mlflow.start_run(run_name="ridge-regression-corn-yield"):
+    with mlflow.start_run(run_name="Ridge-regression-corn-yield"):
         
         # Log dataset information
         mlflow.log_param("n_features", X_train_full.shape[1])
