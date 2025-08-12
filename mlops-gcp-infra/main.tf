@@ -47,8 +47,9 @@ module "kestra" {
   gcs_bucket_name = module.gcs.kestra_bucket_name
 }
 
-# module "monitoring" {
-#   source = "./modules/monitoring"
-#   region = var.region
-#   image  = var.evidently_image
-# }
+module "monitoring" {
+  source     = "./modules/monitoring"
+  project_id = var.project_id
+  region     = var.region
+  image      = "gcr.io/${var.project_id}/evidently-app:latest"
+}
