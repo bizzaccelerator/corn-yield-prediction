@@ -59,16 +59,27 @@ resource "random_id" "image_tag" {
   byte_length = 4
 }
 
-# Build image automatically
+# Build & push Docker image using Cloud Build
 resource "null_resource" "build_image" {
   triggers = {
     image_name = local.image_name
     dockerfile = filesha256("${path.module}/evidently-ui/Dockerfile")
+    cloudbuild = filesha256("${path.module}/evidently-ui/cloudbuild.yaml")
   }
 
   provisioner "local-exec" {
     working_dir = "${path.module}/evidently-ui"
-    command     = "gcloud builds submit --project ${var.project_id} --tag ${local.image_name} ."
+
+    # Force cross-platform shell execution
+    interpreter = ["bash", "-c"]
+
+    command = <<EOT
+      gcloud builds submit \
+        --config=cloudbuild.yaml \
+        --project ${var.project_id} \
+        --substitutions=_IMAGE_NAME=${local.image_name} \
+        .
+    EOT
   }
 
   depends_on = [
@@ -79,9 +90,10 @@ resource "null_resource" "build_image" {
 
 # Deploy Cloud Run with GCS volume
 resource "google_cloud_run_v2_service" "evidently" {
-  name     = var.service_name
-  location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  name                 = var.service_name
+  location             = var.region
+  ingress              = "INGRESS_TRAFFIC_ALL"
+  deletion_protection  = false
 
   template {
     service_account = google_service_account.sa.email
