@@ -48,8 +48,9 @@ module "kestra" {
 }
 
 module "monitoring" {
-  source     = "./modules/monitoring"
-  project_id = var.project_id
-  region     = var.region
-  image      = "gcr.io/${var.project_id}/evidently-app:latest"
+  source      = "./modules/monitoring"
+  project_id  = var.project_id
+  region      = var.region
+  service_name = "evidently-ui"
+  repo_name   = "apps"
 }

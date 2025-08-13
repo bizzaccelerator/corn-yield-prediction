@@ -2,10 +2,6 @@ output "artifact_bucket_url" {
   value = module.gcs.bucket_url
 }
 
-# output "mlflow_url" {
-#   value = module.mlflow.mlflow_url
-# }
-
 # KESTRA
 output "kestra_public_ip" {
   description = "Public IP address of Kestra server"
@@ -27,6 +23,11 @@ output "kestra_database_connection_name" {
   value       = module.kestra.database_connection_name
 }
 
-output "evidently_url" {
+# EVIDENTLY
+output "evidently_ui_url" {
   value = module.monitoring.evidently_url
+}
+
+output "evidently_ui_bucket" {
+  value = module.monitoring.evidently_bucket
 }
