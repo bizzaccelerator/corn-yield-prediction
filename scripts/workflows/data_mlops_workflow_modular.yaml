@@ -109,5 +109,5 @@ outputs:
     value: "{{ outputs.deploy_selected_model.outputs.deployment_result }}"
   
   - id: build_info
-    type: JSON
-    value: "{{ outputs.deploy_selected_model.outputs.build_info }}"
+    type: STRING
+    value: "{{ outputs.deploy_selected_model.outputs.build_info ?? outputs.deploy_selected_model.outputs.skip_message }}"

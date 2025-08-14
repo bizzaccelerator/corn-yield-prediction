@@ -97,6 +97,8 @@ tasks:
           waitress==2.0.0
           google-cloud-logging==3.8.0
           mlflow==3.1.4
+          joblib==1.4.2
+          scipy==1.13.1
           EOF
 
           # Create main.py (Flask app) - Updated to load from MLflow
@@ -110,6 +112,9 @@ tasks:
           import mlflow
           import mlflow.sklearn
           from mlflow.tracking import MlflowClient
+          from mlflow.artifacts import download_artifacts  # NEW
+          import joblib  # NEW
+          from scipy import sparse  # NEW (to handle sparse -> dense if needed)
 
           # Setup logging
           logging.basicConfig(level=logging.INFO)
@@ -127,28 +132,54 @@ tasks:
           try:
               model_name = metadata['model_name']
               model_stage = metadata.get('model_stage', 'Production')
-              
+              run_id = metadata.get('mlflow_run_id')  # needed to fetch artifacts
+
               logger.info(f"Loading model: {model_name} from stage: {model_stage}")
               model_uri = f"models:/{model_name}/{model_stage}"
               model = mlflow.sklearn.load_model(model_uri)
-              
               logger.info(f"Model loaded successfully: {model_name} v{metadata['model_version']}")
+
+              # --- Download and load the vectorizer from the run artifacts (NEW) ---
+              if not run_id:
+                  raise RuntimeError("mlflow_run_id missing from model_metadata.json; cannot fetch vectorizer.")
+
+              vec_artifact_path = f"runs:/{run_id}/vectorizer/vectorizer.pkl"
+              logger.info(f"Fetching vectorizer artifact from: {vec_artifact_path}")
+              local_vec_path = download_artifacts(vec_artifact_path)
+              vectorizer = joblib.load(local_vec_path)
+              logger.info("Vectorizer loaded successfully.")
+
           except Exception as e:
-              logger.error(f"Failed to load model: {e}")
+              logger.error(f"Failed to initialize model/vectorizer: {e}")
               raise
 
           # Instantiating the app
           app = Flask('yield')
 
+          def _transform_payload_with_vectorizer(payload: dict):
+              """
+              Apply DictVectorizer (or compatible transformer) to incoming JSON payload.
+              Ensures dense ndarray for estimators that don't accept sparse input.
+              """
+              # Vectorizers typically expect a list of dicts
+              X = vectorizer.transform([payload])
+
+              # Some models (e.g., GBDT) expect dense input
+              if sparse.issparse(X):
+                  X = X.toarray()
+
+              return X
+
           @app.route('/predict', methods=['POST'])
           def predict():
               try:
                   farmer_data = request.get_json()
-                  
-                  # Convert to DataFrame for prediction
-                  df = pd.DataFrame([farmer_data])
-                  y_pred = model.predict(df)[0]
-                  
+                  if not isinstance(farmer_data, dict):
+                      return jsonify({'error': 'Payload must be a single JSON object with feature:value pairs'}), 400
+
+                  X = _transform_payload_with_vectorizer(farmer_data)
+                  y_pred = model.predict(X)[0]
+
                   result = {
                       'yield_prediction': float(y_pred),
                       'model_version': metadata['model_version'],
@@ -169,6 +200,7 @@ tasks:
 
           if __name__ == "__main__":
               app.run(debug=True, host='0.0.0.0', port=9696)
+
           EOF
 
           # Move metadata to app directory
@@ -334,6 +366,24 @@ tasks:
       - id: skip_deployment
         type: io.kestra.plugin.core.log.Log
         message: "Deployment skipped - candidate model not better than production or force_deployment is false"
+      
+      - id: skip_output
+        type: io.kestra.plugin.core.debug.Return
+        format: "Deployment skipped - candidate model not better than production or force_deployment is false"
+
+  # The final information is
+  - id: final_build_info
+    type: io.kestra.plugin.core.debug.Return
+    format: >-
+      {{ outputs.containsKey('build_and_push_to_gcr') ? read(outputs.build_and_push_to_gcr.outputFiles ['build_info.json']) : null }}
+
+  - id: final_skip_message
+    type: io.kestra.plugin.core.debug.Return
+    format: >-
+      {{ outputs.containsKey('skip_output') ? outputs.skip_output.value : null  }}
+
+
+
 
 outputs:
   - id: deployment_result
@@ -341,5 +391,9 @@ outputs:
     value: "{{ read(outputs.fetch_and_compare_models.outputFiles['deployment_decision.json']) }}"
   
   - id: build_info
-    type: JSON
-    value: "{{ read(outputs.build_and_push_to_gcr.outputFiles['build_info.json']) }}"
+    type: STRING
+    value: "{{ outputs.final_build_info.value }}"
+
+  - id: skip_message
+    type: STRING
+    value: "{{ outputs.final_skip_message.value }}"

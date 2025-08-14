@@ -11,6 +11,7 @@ from sklearn.preprocessing import StandardScaler
 import pandas as pd
 import numpy as np
 import os, pickle, json
+import joblib
 
 
 ########## THE FIRST PART IS LOADING THE DATA AND CONFIG
@@ -149,6 +150,11 @@ if model_selection == 'linear':
             registered_model_name=model_name  # This registers the model
         )
 
+        # Save vectorizer separately as pickle
+        vectorizer_path = "vectorizer.pkl"
+        joblib.dump(dv, vectorizer_path)
+        mlflow.log_artifact(vectorizer_path, artifact_path="model")  # Save in same folder
+
         # Save metrics and run info
         run_info = {
             'mlflow_run_id': mlflow.active_run().info.run_id,
@@ -228,6 +234,11 @@ elif model_selection == 'ridge':
             artifact_path="model",
             registered_model_name=model_name
         )
+
+        # Save vectorizer separately as pickle
+        vectorizer_path = "vectorizer.pkl"
+        joblib.dump(dv, vectorizer_path)
+        mlflow.log_artifact(vectorizer_path, artifact_path="model")  # Save in same folder
         
         # Log hyperopt trials information
         try:
@@ -327,6 +338,11 @@ elif model_selection == 'lasso':
             artifact_path="model",
             registered_model_name=model_name
         )
+
+        # Save vectorizer separately as pickle
+        vectorizer_path = "vectorizer.pkl"
+        joblib.dump(dv, vectorizer_path)
+        mlflow.log_artifact(vectorizer_path, artifact_path="model")  # Save in same folder
         
         # Log hyperopt trials information
         try:
@@ -442,6 +458,11 @@ elif model_selection == 'gbr':
             artifact_path="model",
             registered_model_name=model_name
         )
+
+        # Save vectorizer separately as pickle
+        vectorizer_path = "vectorizer.pkl"
+        joblib.dump(dv, vectorizer_path)
+        mlflow.log_artifact(vectorizer_path, artifact_path="model")  # Save in same folder
         
         # Log hyperopt trials information
         try:
