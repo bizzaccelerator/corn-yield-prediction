@@ -77,11 +77,109 @@ tasks:
           - python model_registry.py
         outputFiles:
           - "*.json"
+      
+      - id: extract_model_and_vectorizer
+        type: io.kestra.plugin.scripts.python.Script
+        containerImage: ghcr.io/kestra-io/pydata:latest
+        description: Extracting model and vectorizer currently in production
+        inputFiles:
+          model_metadata.json: "{{ outputs.register_model_in_mlflow.outputFiles['model_metadata.json'] }}"
+        beforeCommands:
+          - pip3 install mlflow==3.1.4 google-cloud-storage==2.10.0 "protobuf>=3.20.0,<5.0.0"
+        script: |
+          import os
+          import json
+          import mlflow
+          import mlflow.sklearn  
+          from mlflow.artifacts import download_artifacts
+          import joblib
+          import shutil
+
+          # Create app directory structure first
+          os.makedirs('mydir/artifacts', exist_ok=True)
+
+          print("=== MODEL METADATA VERIFICATION ===")
+          print("Model metadata contents:")
+          with open('model_metadata.json', 'r') as f:
+              metadata = json.load(f)
+              print(json.dumps(metadata, indent=2))
+
+          print("=== STARTING ARTIFACT DOWNLOAD ===")
+
+          # Setup MLflow
+          mlflow.set_tracking_uri(metadata['mlflow_tracking_uri'])
+          run_id = metadata['mlflow_run_id']
+          
+          print(f"MLflow URI: {metadata['mlflow_tracking_uri']}")
+          print(f"Run ID: {run_id}")
+
+          try:
+              # Download the entire model directory
+              print("Downloading model directory...")
+              model_dir_path = f"runs:/{run_id}/model"
+              local_model_dir = download_artifacts(model_dir_path)
+              
+              print(f"Downloaded model directory to: {local_model_dir}")
+              print(f"Model directory contents: {os.listdir(local_model_dir)}")
+
+              # Load MLflow model and save as simple pickle
+              print("Loading and converting MLflow model...")
+              model = mlflow.sklearn.load_model(model_dir_path)
+              
+              model_output_path = 'mydir/artifacts/model.pkl'
+              joblib.dump(model, model_output_path)
+              print(f"Model saved to: {model_output_path}")
+
+              # Find and copy vectorizer
+              vectorizer_source = os.path.join(local_model_dir, 'vectorizer.pkl')
+              vectorizer_output_path = 'mydir/artifacts/vectorizer.pkl'
+              
+              if os.path.exists(vectorizer_source):
+                  shutil.copy2(vectorizer_source, vectorizer_output_path)
+                  print(f"Vectorizer copied to: {vectorizer_output_path}")
+              else:
+                  print(f"Vectorizer not found at expected location: {vectorizer_source}")
+                  print("Searching for vectorizer in subdirectories...")
+                  
+                  found = False
+                  for root, dirs, files in os.walk(local_model_dir):
+                      if 'vectorizer.pkl' in files:
+                          source = os.path.join(root, 'vectorizer.pkl')
+                          shutil.copy2(source, vectorizer_output_path)
+                          print(f"Found and copied vectorizer from: {source}")
+                          found = True
+                          break
+                  
+                  if not found:
+                      raise FileNotFoundError(f"vectorizer.pkl not found in {local_model_dir}")
+
+              # Verify both files exist with sizes
+              for artifact_name in ['model.pkl', 'vectorizer.pkl']:
+                  artifact_path = f'mydir/artifacts/{artifact_name}'
+                  if os.path.exists(artifact_path):
+                      size = os.path.getsize(artifact_path)
+                      print(f"{artifact_name}: {size} bytes")
+                  else:
+                      raise FileNotFoundError(f"{artifact_name} missing after download")
+
+              print("=== ARTIFACT DOWNLOAD COMPLETED SUCCESSFULLY ===")
+
+          except Exception as e:
+              print(f"DOWNLOAD FAILED: {e}")
+              import traceback
+              traceback.print_exc()
+              raise e
+        
+        outputFiles:
+          - "mydir/**"
+
 
       - id: build_docker_image
         type: io.kestra.plugin.scripts.shell.Commands
         description: Build Docker image for the model service
         inputFiles:
+          model.pkl: "{{ outputs.extract_model_and_vectorizer.outputFiles['mydir/artifacts/model.pkl'] }}"
+          vectorizer.pkl: "{{ outputs.extract_model_and_vectorizer.outputFiles['mydir/artifacts/vectorizer.pkl'] }}"
           model_metadata.json: "{{ outputs.register_model_in_mlflow.outputFiles['model_metadata.json'] }}"
         commands:
         - |
@@ -101,7 +199,7 @@ tasks:
           scipy==1.13.1
           EOF
 
-          # Create main.py (Flask app) - Updated to load from MLflow
+          # Create main.py (Flask app)
           cat > app/main.py << 'EOF'
           import os
           import json
@@ -109,12 +207,8 @@ tasks:
           from flask import Flask, request, jsonify
           import pandas as pd
           import numpy as np
-          import mlflow
-          import mlflow.sklearn
-          from mlflow.tracking import MlflowClient
-          from mlflow.artifacts import download_artifacts  # NEW
-          import joblib  # NEW
-          from scipy import sparse  # NEW (to handle sparse -> dense if needed)
+          import joblib
+          from scipy import sparse
 
           # Setup logging
           logging.basicConfig(level=logging.INFO)
@@ -124,36 +218,23 @@ tasks:
           with open('model_metadata.json', 'r') as f:
               metadata = json.load(f)
 
-          # Setup MLflow
-          mlflow.set_tracking_uri(metadata['mlflow_tracking_uri'])
-          client = MlflowClient()
-
-          # Load model from MLflow
+          # Load model and vectorizer from local files
           try:
-              model_name = metadata['model_name']
-              model_stage = metadata.get('model_stage', 'Production')
-              run_id = metadata.get('mlflow_run_id')  # needed to fetch artifacts
-
-              logger.info(f"Loading model: {model_name} from stage: {model_stage}")
-              model_uri = f"models:/{model_name}/{model_stage}"
-              model = mlflow.sklearn.load_model(model_uri)
-              logger.info(f"Model loaded successfully: {model_name} v{metadata['model_version']}")
-
-              # --- Download and load the vectorizer from the run artifacts (NEW) ---
-              if not run_id:
-                  raise RuntimeError("mlflow_run_id missing from model_metadata.json; cannot fetch vectorizer.")
-
-              vec_artifact_path = f"runs:/{run_id}/vectorizer/vectorizer.pkl"
-              logger.info(f"Fetching vectorizer artifact from: {vec_artifact_path}")
-              local_vec_path = download_artifacts(vec_artifact_path)
-              vectorizer = joblib.load(local_vec_path)
-              logger.info("Vectorizer loaded successfully.")
+              logger.info("Loading model and vectorizer from local files...")
+              
+              # Load the model
+              model = joblib.load('model.pkl')
+              logger.info("Model loaded successfully")
+              
+              # Load the vectorizer
+              vectorizer = joblib.load('vectorizer.pkl')
+              logger.info("Vectorizer loaded successfully")
 
           except Exception as e:
               logger.error(f"Failed to initialize model/vectorizer: {e}")
               raise
 
-          # Instantiating the app
+          # Instantiate the Flask app
           app = Flask('yield')
 
           def _transform_payload_with_vectorizer(payload: dict):
@@ -200,11 +281,12 @@ tasks:
 
           if __name__ == "__main__":
               app.run(debug=True, host='0.0.0.0', port=9696)
-
           EOF
 
-          # Move metadata to app directory
+          # Copy files to app directory
           cp model_metadata.json app/
+          cp model.pkl app/
+          cp vectorizer.pkl app/
 
           # Create Dockerfile
           cat > Dockerfile << EOF
