@@ -63,12 +63,8 @@ tasks:
 
           print(f"MLflow URI: {mlflow_tracking_uri}")
           print(f"Run ID: {run_id}")
-
-          # Download the model artifacts from the run
-          model_uri = f"runs:/{run_id}/model"
-          
+     
           print(f"Found production model: {model_name} version {model_version}")
-          print(f"Model URI: {model_uri}")
           
           # Download the model
           print("Downloading model directory...")
@@ -119,7 +115,7 @@ tasks:
           model_info = {
               "model_name": model_name,
               "model_version": model_version,
-              "model_uri": model_uri,
+              "model_uri": model_dir_path,
               "model_stage": "Production",
               "vectorizer_found": vectorizer_found
           }
