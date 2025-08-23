@@ -289,129 +289,131 @@ tasks:
       feature_names.npy: "{{ outputs.load_and_prepare_base_data.outputFiles['feature_names.npy'] }}"
     beforeCommands:
       - pip install mlflow pandas==2.3.1 numpy==2.2.6 scikit-learn==1.7.1 mlflow==3.1.4 joblib==1.4.2
-      - pip install evidently==0.7.9
+      - pip install evidently==0.7.9 requests
     commands:
       - python monitoring.py
     outputFiles:
-      - "/**"
+    - "workspace/**"
+    - "report_*.json"
+    - "project_metadata.json"
 
 
-  - id: load_and_prepare_test_data
-    type: "io.kestra.plugin.scripts.python.Script"
-    containerImage: ghcr.io/kestra-io/pydata:latest
-    description: "Load new dataset and prepare for evaluation"
-    taskRunner:
-      type: io.kestra.plugin.core.runner.Process
-    beforeCommands:
-      - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn
-    namespaceFiles:
-      enabled: true
-      include:
-        - corn_add.csv 
-    script: |
-      import pandas as pd
-      import pickle
-      from sklearn.feature_extraction import DictVectorizer
-      from sklearn.model_selection import train_test_split
+  # - id: load_and_prepare_test_data
+  #   type: "io.kestra.plugin.scripts.python.Script"
+  #   containerImage: ghcr.io/kestra-io/pydata:latest
+  #   description: "Load new dataset and prepare for evaluation"
+  #   taskRunner:
+  #     type: io.kestra.plugin.core.runner.Process
+  #   beforeCommands:
+  #     - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn
+  #   namespaceFiles:
+  #     enabled: true
+  #     include:
+  #       - corn_add.csv 
+  #   script: |
+  #     import pandas as pd
+  #     import pickle
+  #     from sklearn.feature_extraction import DictVectorizer
+  #     from sklearn.model_selection import train_test_split
 
-      corn = pd.read_csv("corn_add.csv", sep="," )
+  #     corn = pd.read_csv("corn_add.csv", sep="," )
 
 
-      ## Step 1: Understanding the data
+  #     ## Step 1: Understanding the data
       
-      print("The dataset size is: ", corn.shape)
-      print("The columns in the dataset size are: ", corn.columns)
+  #     print("The dataset size is: ", corn.shape)
+  #     print("The columns in the dataset size are: ", corn.columns)
 
-      corn.info()
-      print("The number of null values in the dataset is confirmed as: ",corn.isna().sum())
-
-
-      ## Step 2: Data preparation
-      # Now that I have a general understanding of the data, some cleaning is needed before proceeding with further analysis.
+  #     corn.info()
+  #     print("The number of null values in the dataset is confirmed as: ",corn.isna().sum())
 
 
-      # Then, our subset selected for analysis is:
-      corn_subset = corn[['Education', 'Gender', 'Age bracket',
-                          'Household size', 'Acreage', 'Fertilizer amount', 'Laborers',
-                          'Yield', 'Main credit source', 'Farm records', 
-                          'Main advisory source', 'Extension provider', 'Advisory format', 
-                          'Advisory language']]
-
-      # Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
-      corn_subset.columns = [name.lower() for name in corn_subset.columns]
-      corn_subset.columns = [name.replace(" ","_") for name in corn_subset.columns]
+  #     ## Step 2: Data preparation
+  #     # Now that I have a general understanding of the data, some cleaning is needed before proceeding with further analysis.
 
 
-      # Those registries represent:
-      missing_land = corn_subset['acreage'].isna().sum()
-      amount_ml = (missing_land / corn.shape[0])*100
-      print(f'The percentage of registries with missing values of cultivated land represent {amount_ml}')
-      # While removing a large number of missing values is generally not advisable, the lack of access to the research team for clarification and the limited usefulness of this data for our model, these rows will be removed from the dataframe.
+  #     # Then, our subset selected for analysis is:
+  #     corn_subset = corn[['Education', 'Gender', 'Age bracket',
+  #                         'Household size', 'Acreage', 'Fertilizer amount', 'Laborers',
+  #                         'Yield', 'Main credit source', 'Farm records', 
+  #                         'Main advisory source', 'Extension provider', 'Advisory format', 
+  #                         'Advisory language']]
 
-      # The resulting dataframe is:
-      filter = corn_subset['acreage'].isna()
-      corn_subset = corn_subset[~filter]
-
-      # It makes sense that farmers in a developing country might have little to no formal education. Therefore, we can reasonably infer that many of them have not achieved any formal academic qualifications.
-      # We populate the missing values in the education column with "No educated":
-      corn_subset.loc[corn_subset['education'].isna()] = corn_subset.loc[corn_subset['education'].isna()].fillna('No educated')
-      print("The main statistics for out clean dataset are: ",corn_subset.describe(include='all'))
+  #     # Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
+  #     corn_subset.columns = [name.lower() for name in corn_subset.columns]
+  #     corn_subset.columns = [name.replace(" ","_") for name in corn_subset.columns]
 
 
-      ## Step 3: Feature understanding
-      # Now, it is important to understand how the selected variables behave:
-      print("The target variable is Yield")
-      print("There are no outliers visible at first glance")
+  #     # Those registries represent:
+  #     missing_land = corn_subset['acreage'].isna().sum()
+  #     amount_ml = (missing_land / corn.shape[0])*100
+  #     print(f'The percentage of registries with missing values of cultivated land represent {amount_ml}')
+  #     # While removing a large number of missing values is generally not advisable, the lack of access to the research team for clarification and the limited usefulness of this data for our model, these rows will be removed from the dataframe.
 
-      categorical_columns = ['education', 'age_bracket', 'household_size', 'laborers', 
-                            'main_advisory_source', 'acreage']
+  #     # The resulting dataframe is:
+  #     filter = corn_subset['acreage'].isna()
+  #     corn_subset = corn_subset[~filter]
 
-      # The significant variables identifyed were:
-      significant_var = ['education', 'age_bracket', 'household_size', 'laborers', 'main_advisory_source', 
-                    'acreage', 'fertilizer_amount', 'yield']
-
-      # The not significant variables identifyed were:
-      not_significant_var = ['gender', 'main_credit_source', 'farm_records', 'extension_provider', 
-                            'advisory_format', 'advisory_language']
-
-      # The cleaned dataset is filtered to include the significant variables identified above.
-      corn_cleaned = corn_subset[significant_var]
-      corn.reset_index
-      print("The final cleaned data is the following: ")
-      print(corn_cleaned.head())
+  #     # It makes sense that farmers in a developing country might have little to no formal education. Therefore, we can reasonably infer that many of them have not achieved any formal academic qualifications.
+  #     # We populate the missing values in the education column with "No educated":
+  #     corn_subset.loc[corn_subset['education'].isna()] = corn_subset.loc[corn_subset['education'].isna()].fillna('No educated')
+  #     print("The main statistics for out clean dataset are: ",corn_subset.describe(include='all'))
 
 
-      # the Working dataset is prepared and splitted as follows:
-      # Preparation dataset
-      X = corn_cleaned.drop('yield', axis=1)
-      y = corn_cleaned['yield']
-      # Turning the dataframes into dictionaries:
-      X_dic = X.to_dict(orient='records')
-      # Instanciating the vectorizer for Hot Encoding:
-      dv = DictVectorizer(sparse=False)
-      # Applying the vectorizer:
-      X_encoded = dv.fit_transform(X_dic)
+  #     ## Step 3: Feature understanding
+  #     # Now, it is important to understand how the selected variables behave:
+  #     print("The target variable is Yield")
+  #     print("There are no outliers visible at first glance")
 
-      # More robust saving that handles both DataFrames and numpy arrays
-      def save_to_csv(data, filename):
-          if hasattr(data, 'to_csv'):  # It's already a DataFrame
-              data.to_csv(filename, index=False)
-          else:  # It's a numpy array or similar
-              pd.DataFrame(data).to_csv(filename, index=False)
+  #     categorical_columns = ['education', 'age_bracket', 'household_size', 'laborers', 
+  #                           'main_advisory_source', 'acreage']
 
-      # Save feature datasets
-      save_to_csv(X_encoded, 'X_train.csv')
+  #     # The significant variables identifyed were:
+  #     significant_var = ['education', 'age_bracket', 'household_size', 'laborers', 'main_advisory_source', 
+  #                   'acreage', 'fertilizer_amount', 'yield']
 
-      # Save target datasets
-      y.to_csv('target.csv', index=False)
+  #     # The not significant variables identifyed were:
+  #     not_significant_var = ['gender', 'main_credit_source', 'farm_records', 'extension_provider', 
+  #                           'advisory_format', 'advisory_language']
+
+  #     # The cleaned dataset is filtered to include the significant variables identified above.
+  #     corn_cleaned = corn_subset[significant_var]
+  #     corn.reset_index
+  #     print("The final cleaned data is the following: ")
+  #     print(corn_cleaned.head())
+
+
+  #     # the Working dataset is prepared and splitted as follows:
+  #     # Preparation dataset
+  #     X = corn_cleaned.drop('yield', axis=1)
+  #     y = corn_cleaned['yield']
+  #     # Turning the dataframes into dictionaries:
+  #     X_dic = X.to_dict(orient='records')
+  #     # Instanciating the vectorizer for Hot Encoding:
+  #     dv = DictVectorizer(sparse=False)
+  #     # Applying the vectorizer:
+  #     X_encoded = dv.fit_transform(X_dic)
+
+  #     # More robust saving that handles both DataFrames and numpy arrays
+  #     def save_to_csv(data, filename):
+  #         if hasattr(data, 'to_csv'):  # It's already a DataFrame
+  #             data.to_csv(filename, index=False)
+  #         else:  # It's a numpy array or similar
+  #             pd.DataFrame(data).to_csv(filename, index=False)
+
+  #     # Save feature datasets
+  #     save_to_csv(X_encoded, 'X_train.csv')
+
+  #     # Save target datasets
+  #     y.to_csv('target.csv', index=False)
     
-    outputFiles:
-      - "target.csv"
-      - "X_encoded.csv"
+  #   outputFiles:
+  #     - "target.csv"
+  #     - "X_encoded.csv"
   
   
 
-  # - id: prepare_following_report
+  # # - id: prepare_following_report
   #   type: io.kestra.plugin.scripts.python.Commands
   #   containerImage: ghcr.io/kestra-io/pydata:latest
   #   description: "Create the report for evaluation at following month (next performance)"

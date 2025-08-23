@@ -114,7 +114,7 @@ vectorized_features = list(X_encoded_train.columns)
 # Define the schema - all vectorized features are numerical
 schema = DataDefinition(
     numerical_columns=vectorized_features + ["prediction"],  
-    categorical_columns=[],
+    categorical_columns=[]  
 )
 
 # Create Evidently Datasets to work with:
