@@ -16,7 +16,7 @@ inputs:
 
 variables:
   mlflow_url: "https://mlflow-server-453290981886.us-central1.run.app/"
-  evidently_ui_url: "https://evidently-ui-c4tqdte5jq-uc.a.run.app"
+  evidently_ui_url: "https://evidently-ui-453290981886.us-central1.run.app/"
   evidently_url: "https://evidently-monitoring-c4tqdte5jq-uc.a.run.app"
 
 tasks:
@@ -301,58 +301,73 @@ tasks:
   - id: verify_cloud_upload
     type: "io.kestra.plugin.scripts.python.Script"
     containerImage: ghcr.io/kestra-io/pydata:latest
-    description: "Verify upload to Evidently cloud services and handle any retries"
+    description: "Verify upload to evidently cloud services and handle any retries"
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
     inputFiles:
       project_metadata.json: "{{ outputs.prepare_base_report.outputFiles['project_metadata.json'] }}"
-      workspace: "{{ outputs.prepare_base_report.outputFiles['workspace/**'] }}"
+      workspace.zip: "{{ outputs.prepare_base_report.outputFiles['workspace.zip'] }}"
+    env:
+      evidently_ui_url: "{{ vars.evidently_ui_url}}"
+      evidently_monitoring_url: "{{ vars.evidently_url}}"
     beforeCommands:
       - pip install requests pandas
     script: |
       import json
       import requests
       import os
-      
+      import zipfile
+
       # Load project metadata
       with open('project_metadata.json', 'r') as f:
           metadata = json.load(f)
-      
+
       print("=== EVIDENTLY CLOUD UPLOAD VERIFICATION ===")
       print(f"Project ID: {metadata['project_id']}")
-      print(f"Timestamp: {metadata['timestamp']}")
+      print(f"Timestamp: {metadata['created_at']}")
       print(f"Report Name: {metadata['report_name']}")
-      
+
+      # Check upload status
       upload_status = metadata['upload_status']
       print(f"\nUpload Status:")
       print(f"  Monitoring Service: {'✅ Success' if upload_status['monitoring_service'] else '❌ Failed'}")
       print(f"  UI Service: {'✅ Success' if upload_status['ui_service'] else '❌ Failed'}")
+
       if 'error' in upload_status:
           print(f"  Error: {upload_status['error']}")
-      
-      evidently_ui_url = metadata['evidently_ui_url']
-      evidently_monitoring_url = metadata['evidently_monitoring_url']
-      
+
+      # Loading the urls of evidently
+      evidently_ui_url = os.getenv("evidently_ui_url")
+      evidently_monitoring_url = os.getenv("evidently_monitoring_url")
+
       print(f"\n=== SERVICE HEALTH CHECK ===")
+
       try:
           ui_health = requests.get(f"{evidently_ui_url}/health", timeout=10)
           print(f"UI Service ({evidently_ui_url}): {'✅ Available' if ui_health.status_code == 200 else '❌ Unavailable'}")
       except Exception as e:
           print(f"UI Service ({evidently_ui_url}): ❌ Error - {e}")
-      
+
       try:
           monitoring_health = requests.get(f"{evidently_monitoring_url}/health", timeout=10)
           print(f"Monitoring Service ({evidently_monitoring_url}): {'✅ Available' if monitoring_health.status_code == 200 else '❌ Unavailable'}")
       except Exception as e:
           print(f"Monitoring Service ({evidently_monitoring_url}): ❌ Error - {e}")
-      
+
       print(f"\n=== AVAILABLE FILES ===")
-      for root, dirs, files in os.walk('workspace'):
+      for root, dirs, files in os.walk('.'):
           for file in files:
               file_path = os.path.join(root, file)
               file_size = os.path.getsize(file_path)
               print(f"  {file_path}: {file_size} bytes")
-      
+
+      # Unzip workspace for inspection if needed
+      if os.path.exists("workspace.zip"):
+          with zipfile.ZipFile("workspace.zip", 'r') as zip_ref:
+              zip_ref.extractall("workspace_extracted")
+          print(f"\nWorkspace extracted to workspace_extracted/")
+
+      # Create summary
       summary = {
           "verification_timestamp": metadata['timestamp'],
           "project_id": metadata['project_id'],
@@ -361,20 +376,19 @@ tasks:
           "next_steps": [
               "Monitor dashboards at: " + evidently_ui_url,
               "Access API at: " + evidently_monitoring_url,
-              "Project files available in workspace/"
+              "Project files available in workspace.zip"
           ]
       }
-      
+
       with open('verification_summary.json', 'w') as f:
           json.dump(summary, f, indent=2)
-      
+
       print(f"\n=== VERIFICATION COMPLETE ===")
       print("Summary saved to verification_summary.json")
       print(f"🎉 Evidently monitoring setup complete!")
       print(f"📊 Dashboard: {evidently_ui_url}")
       print(f"🔧 API: {evidently_monitoring_url}")
-    outputFiles:
-      - verification_summary.json
+
 
 
   - id: notify_completion

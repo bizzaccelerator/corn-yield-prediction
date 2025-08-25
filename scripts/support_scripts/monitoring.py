@@ -4,18 +4,20 @@ import pandas as pd
 import json
 import numpy as np
 import joblib
-import shutil
+import requests
 
 from evidently import Report, Dataset, DataDefinition
-from evidently.ui.workspace import Workspace
+from evidently.ui.workspace import RemoteWorkspace
 from evidently.sdk.models import PanelMetric
 from evidently.sdk.panels import DashboardPanelPlot
 from evidently.metrics import *
 from evidently.presets import DataDriftPreset, DataSummaryPreset
 from sklearn.model_selection import train_test_split
 
-### LOAD THE DATA
+# Configuration for remote Evidently service
+EVIDENTLY_SERVICE_URL = "https://evidently-ui-453290981886.us-central1.run.app"
 
+### LOAD THE DATA (same as before)
 validation_files_exist = os.path.exists('X_encoded_val.csv')
 
 if not validation_files_exist:
@@ -44,15 +46,13 @@ else:
     print("Using both training and validation data")
 
 ### LOAD THE MODEL AND VECTORIZER
-
 with open('model_info.json', "r") as f:
     model_info = json.load(f)
 
 model = joblib.load('model.pkl')
 vectorizer = joblib.load('vectorizer.pkl')
 
-### CREATE PREDICTIONS
-
+### CREATE PREDICTIONS (same as before)
 train_predictions = model.predict(X_encoded_train.values)
 
 if X_encoded_val is not None:
@@ -76,8 +76,7 @@ else:
 
     print("Split training data into reference and current datasets for monitoring")
 
-### CREATE THE REPORT DATASETS
-
+### CREATE THE REPORT DATASETS (same as before)
 reference_data = X_encoded_train.copy()
 reference_data['target'] = target_train.values
 reference_data['prediction'] = train_predictions
@@ -96,100 +95,139 @@ schema = DataDefinition(
 eval_data_1 = Dataset.from_pandas(pd.DataFrame(reference_data), data_definition=schema)
 eval_data_2 = Dataset.from_pandas(pd.DataFrame(current_data), data_definition=schema)
 
-### EXAMPLE METRIC REPORT
+### CREATE REMOTE WORKSPACE AND PROJECT
+try:
+    # Connect to remote Evidently workspace
+    ws = RemoteWorkspace(EVIDENTLY_SERVICE_URL)
+    
+    # Try to get existing project or create new one
+    project_name = "Corn Yield prediction"
+    try:
+        # List existing projects to check if it exists
+        projects = ws.list_projects()
+        existing_project = None
+        for proj in projects:
+            if proj.name == project_name:
+                existing_project = proj
+                break
+        
+        if existing_project:
+            project = existing_project
+            print(f"Using existing project: {project.name}")
+        else:
+            project = ws.create_project(project_name)
+            project.description = "Predict the yield of corn in Kenya"
+            print(f"Created new project: {project.name}")
+    except Exception as e:
+        print(f"Error managing project: {e}")
+        # Fallback: create project with timestamp
+        project = ws.create_project(f"{project_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        project.description = "Predict the yield of corn in Kenya"
 
-report_2 = Report(metrics=[
-    ValueDrift(column="prediction", method="ks"),
-    StdValue(column="prediction"),
-    QuantileValue(column="prediction")
-])
+    # Create and run report
+    report = Report(metrics=[
+        StdValue(column="prediction"), 
+        RowCount(),
+        ValueDrift(column="prediction", method="ks"),
+        QuantileValue(column="prediction")
+    ])
+    
+    report_result = report.run(current_data=eval_data_2, reference_data=eval_data_1)
+    
+    # Add report to workspace
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    report_name = f'{timestamp}_corn_yield_report'
+    
+    ws.add_run(project.id, report_result, include_data=False)
+    
+    ### ADD DASHBOARD PANELS
+    project.dashboard.add_panel(
+        DashboardPanelPlot(
+            title="Main Dashboard",
+            size="full",
+            values=[],
+            plot_params={"plot_type": "text"},
+        ),
+        tab="Monitoring",
+    )
 
-my_spec_eval = report_2.run(current_data=eval_data_2, reference_data=eval_data_1)
+    project.dashboard.add_panel(
+        DashboardPanelPlot(
+            title="Standard Deviation",
+            subtitle="Std deviation for prediction.",
+            size="half",
+            values=[PanelMetric(
+                legend="Standard Deviation",
+                metric="StdValue",
+                metric_labels={"column": "prediction"}
+            )],
+            plot_params={"plot_type": "bar", "is_stacked": False},
+        ),
+        tab="Monitoring",
+    )
 
-### CREATE WORKSPACE AND PROJECT
+    project.dashboard.add_panel(
+        DashboardPanelPlot(
+            title="Row count",
+            subtitle="Total number of evaluations over time.",
+            size="half",
+            values=[PanelMetric(legend="Row count", metric="RowCount")],
+            plot_params={"plot_type": "counter", "aggregation": "sum"},
+        ),
+        tab="Monitoring",
+    )
 
-ws = Workspace.create("workspace")
-project = ws.create_project("Corn Yield prediction")
-project.description = "Predict the yield of corn in Kenya"
-
-report = Report(metrics=[StdValue(column="prediction"), RowCount()])
-report = report.run(current_data=eval_data_2, reference_data=eval_data_1)
-
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-report_name = f'{timestamp}_report'
-report.save_json(os.path.join(ws.path, str(project.id), f"{report_name}.json"))
-
-ws.add_run(project.id, report, include_data=False)
-
-### ADD DASHBOARD PANELS
-
-project.dashboard.add_panel(
-    DashboardPanelPlot(
-        title="Main Dashboard",
-        size="full",
-        values=[],
-        plot_params={"plot_type": "text"},
-    ),
-    tab="My tab",
-)
-
-project.dashboard.add_panel(
-    DashboardPanelPlot(
-        title="Standard Deviation",
-        subtitle="Std deviation for prediction.",
-        size="half",
-        values=[PanelMetric(
-            legend="Standard Deviation",
-            metric="StdValue",
-            metric_labels={"column": "prediction"}
-        )],
-        plot_params={"plot_type": "bar", "is_stacked": False},
-    ),
-    tab="My tab",
-)
-
-project.dashboard.add_panel(
-    DashboardPanelPlot(
-        title="Row count",
-        subtitle="Total number of evaluations over time.",
-        size="half",
-        values=[PanelMetric(legend="Row count", metric="RowCount")],
-        plot_params={"plot_type": "counter", "aggregation": "sum"},
-    ),
-    tab="My tab",
-)
-
-project.save()
-
-### EXPORT PROJECT METADATA (hybrid: try copy, else fallback)
-
-project_json_path = os.path.join(ws.path, str(project.id), "project.json")
-if os.path.exists(project_json_path):
-    shutil.copy(project_json_path, "project_metadata.json")
-    print("Exported Evidently project metadata from project.json")
-else:
+    project.save()
+    
+    # Export project metadata for Kestra
     project_metadata = {
         "project_id": str(project.id),
         "project_name": project.name,
+        "report_name": report_name,
         "description": project.description,
-        "workspace_path": ws.path,
-        "created_at": datetime.now().isoformat()
+        "evidently_service_url": EVIDENTLY_SERVICE_URL,
+        "evidently_ui_url": "https://evidently-ui-453290981886.us-central1.run.app/",
+        "created_at": datetime.now().isoformat(),
+        "dashboard_url": f"https://evidently-ui-453290981886.us-central1.run.app/projects/{project.id}"
     }
+    
     with open("project_metadata.json", "w") as f:
         json.dump(project_metadata, f, indent=2)
-    print("Generated project_metadata.json manually (project.json not found)")
+    
+    print("Monitoring report and dashboard created successfully on remote Evidently service!")
+    print(f"Project ID: {project.id}")
+    print(f"Dashboard URL: {project_metadata['dashboard_url']}")
+    
+except Exception as e:
+    print(f"Error connecting to remote Evidently service: {e}")
+    print("Falling back to local workspace creation...")
+    
+    # Fallback to original local workspace creation
+    from evidently.ui.workspace import Workspace
+    
+    ws = Workspace.create("workspace")
+    project = ws.create_project("Corn Yield prediction")
+    project.description = "Predict the yield of corn in Kenya"
 
+    report = Report(metrics=[StdValue(column="prediction"), RowCount()])
+    report_result = report.run(current_data=eval_data_2, reference_data=eval_data_1)
 
-# Exporting the workspace folder
-workspace_dir = "workspace"
-zip_path = "workspace.zip"
-
-if os.path.exists(workspace_dir):
-    shutil.make_archive("workspace", "zip", workspace_dir)
-    print(f"Workspace compressed: {zip_path}")
-else:
-    print("No workspace directory found to compress.")
-
-print("Monitoring report and dashboard created successfully!")
-print(f"Workspace path: {ws.path}")
-print(f"Project ID: {project.id}")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    report_name = f'{timestamp}_report'
+    
+    ws.add_run(project.id, report_result, include_data=False)
+    
+    project_metadata = {
+        "project_id": str(project.id),
+        "project_name": project.name,
+        "report_name": report_name,
+        "description": project.description,
+        "workspace_path": ws.path,
+        "created_at": datetime.now().isoformat(),
+        "fallback_mode": True
+    }
+    
+    with open("project_metadata.json", "w") as f:
+        json.dump(project_metadata, f, indent=2)
+    
+    print("Created local workspace as fallback")
