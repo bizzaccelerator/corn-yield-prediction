@@ -298,224 +298,131 @@ tasks:
     - "workspace/**"
     - "workspace.zip"
 
-  - id: verify_cloud_upload
+  # - id: notify_completion
+  #   type: "io.kestra.plugin.core.log.Log"
+  #   message: |
+  #     🎉 Evidently Monitoring Pipeline Complete!
+      
+  #     📊 Dashboard URL: https://evidently-ui-c4tqdte5jq-uc.a.run.app
+  #     🔧 Monitoring API: https://evidently-monitoring-c4tqdte5jq-uc.a.run.app
+      
+  #     Project ID: {{ outputs.verify_cloud_upload.vars.project_id }}
+      
+  #     All reports and dashboards have been uploaded to your Google Cloud Evidently services.
+  #   level: INFO
+
+  - id: load_and_prepare_test_data
     type: "io.kestra.plugin.scripts.python.Script"
     containerImage: ghcr.io/kestra-io/pydata:latest
-    description: "Verify upload to evidently cloud services and handle any retries"
+    description: "Load new dataset and prepare for evaluation"
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
-    inputFiles:
-      project_metadata.json: "{{ outputs.prepare_base_report.outputFiles['project_metadata.json'] }}"
-      workspace.zip: "{{ outputs.prepare_base_report.outputFiles['workspace.zip'] }}"
-    env:
-      evidently_ui_url: "{{ vars.evidently_ui_url}}"
-      evidently_monitoring_url: "{{ vars.evidently_url}}"
     beforeCommands:
-      - pip install requests pandas
+      - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn
+    namespaceFiles:
+      enabled: true
+      include:
+        - corn_add.csv 
     script: |
-      import json
-      import requests
-      import os
-      import zipfile
+      import pandas as pd
+      import pickle
+      from sklearn.feature_extraction import DictVectorizer
+      from sklearn.model_selection import train_test_split
 
-      # Load project metadata
-      with open('project_metadata.json', 'r') as f:
-          metadata = json.load(f)
-
-      print("=== EVIDENTLY CLOUD UPLOAD VERIFICATION ===")
-      print(f"Project ID: {metadata['project_id']}")
-      print(f"Timestamp: {metadata['created_at']}")
-      print(f"Report Name: {metadata['report_name']}")
-
-      # Check upload status
-      upload_status = metadata['upload_status']
-      print(f"\nUpload Status:")
-      print(f"  Monitoring Service: {'✅ Success' if upload_status['monitoring_service'] else '❌ Failed'}")
-      print(f"  UI Service: {'✅ Success' if upload_status['ui_service'] else '❌ Failed'}")
-
-      if 'error' in upload_status:
-          print(f"  Error: {upload_status['error']}")
-
-      # Loading the urls of evidently
-      evidently_ui_url = os.getenv("evidently_ui_url")
-      evidently_monitoring_url = os.getenv("evidently_monitoring_url")
-
-      print(f"\n=== SERVICE HEALTH CHECK ===")
-
-      try:
-          ui_health = requests.get(f"{evidently_ui_url}/health", timeout=10)
-          print(f"UI Service ({evidently_ui_url}): {'✅ Available' if ui_health.status_code == 200 else '❌ Unavailable'}")
-      except Exception as e:
-          print(f"UI Service ({evidently_ui_url}): ❌ Error - {e}")
-
-      try:
-          monitoring_health = requests.get(f"{evidently_monitoring_url}/health", timeout=10)
-          print(f"Monitoring Service ({evidently_monitoring_url}): {'✅ Available' if monitoring_health.status_code == 200 else '❌ Unavailable'}")
-      except Exception as e:
-          print(f"Monitoring Service ({evidently_monitoring_url}): ❌ Error - {e}")
-
-      print(f"\n=== AVAILABLE FILES ===")
-      for root, dirs, files in os.walk('.'):
-          for file in files:
-              file_path = os.path.join(root, file)
-              file_size = os.path.getsize(file_path)
-              print(f"  {file_path}: {file_size} bytes")
-
-      # Unzip workspace for inspection if needed
-      if os.path.exists("workspace.zip"):
-          with zipfile.ZipFile("workspace.zip", 'r') as zip_ref:
-              zip_ref.extractall("workspace_extracted")
-          print(f"\nWorkspace extracted to workspace_extracted/")
-
-      # Create summary
-      summary = {
-          "verification_timestamp": metadata['timestamp'],
-          "project_id": metadata['project_id'],
-          "services_accessible": True,
-          "files_ready": True,
-          "next_steps": [
-              "Monitor dashboards at: " + evidently_ui_url,
-              "Access API at: " + evidently_monitoring_url,
-              "Project files available in workspace.zip"
-          ]
-      }
-
-      with open('verification_summary.json', 'w') as f:
-          json.dump(summary, f, indent=2)
-
-      print(f"\n=== VERIFICATION COMPLETE ===")
-      print("Summary saved to verification_summary.json")
-      print(f"🎉 Evidently monitoring setup complete!")
-      print(f"📊 Dashboard: {evidently_ui_url}")
-      print(f"🔧 API: {evidently_monitoring_url}")
+      corn = pd.read_csv("corn_add.csv", sep="," )
 
 
-
-  - id: notify_completion
-    type: "io.kestra.plugin.core.log.Log"
-    message: |
-      🎉 Evidently Monitoring Pipeline Complete!
+      ## Step 1: Understanding the data
       
-      📊 Dashboard URL: https://evidently-ui-c4tqdte5jq-uc.a.run.app
-      🔧 Monitoring API: https://evidently-monitoring-c4tqdte5jq-uc.a.run.app
-      
-      Project ID: {{ outputs.verify_cloud_upload.vars.project_id }}
-      
-      All reports and dashboards have been uploaded to your Google Cloud Evidently services.
-    level: INFO
+      print("The dataset size is: ", corn.shape)
+      print("The columns in the dataset size are: ", corn.columns)
 
-  # - id: load_and_prepare_test_data
-  #   type: "io.kestra.plugin.scripts.python.Script"
-  #   containerImage: ghcr.io/kestra-io/pydata:latest
-  #   description: "Load new dataset and prepare for evaluation"
-  #   taskRunner:
-  #     type: io.kestra.plugin.core.runner.Process
-  #   beforeCommands:
-  #     - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn
-  #   namespaceFiles:
-  #     enabled: true
-  #     include:
-  #       - corn_add.csv 
-  #   script: |
-  #     import pandas as pd
-  #     import pickle
-  #     from sklearn.feature_extraction import DictVectorizer
-  #     from sklearn.model_selection import train_test_split
-
-  #     corn = pd.read_csv("corn_add.csv", sep="," )
+      corn.info()
+      print("The number of null values in the dataset is confirmed as: ",corn.isna().sum())
 
 
-  #     ## Step 1: Understanding the data
-      
-  #     print("The dataset size is: ", corn.shape)
-  #     print("The columns in the dataset size are: ", corn.columns)
-
-  #     corn.info()
-  #     print("The number of null values in the dataset is confirmed as: ",corn.isna().sum())
+      ## Step 2: Data preparation
+      # Now that I have a general understanding of the data, some cleaning is needed before proceeding with further analysis.
 
 
-  #     ## Step 2: Data preparation
-  #     # Now that I have a general understanding of the data, some cleaning is needed before proceeding with further analysis.
+      # Then, our subset selected for analysis is:
+      corn_subset = corn[['Education', 'Gender', 'Age bracket',
+                          'Household size', 'Acreage', 'Fertilizer amount', 'Laborers',
+                          'Yield', 'Main credit source', 'Farm records', 
+                          'Main advisory source', 'Extension provider', 'Advisory format', 
+                          'Advisory language']]
+
+      # Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
+      corn_subset.columns = [name.lower() for name in corn_subset.columns]
+      corn_subset.columns = [name.replace(" ","_") for name in corn_subset.columns]
 
 
-  #     # Then, our subset selected for analysis is:
-  #     corn_subset = corn[['Education', 'Gender', 'Age bracket',
-  #                         'Household size', 'Acreage', 'Fertilizer amount', 'Laborers',
-  #                         'Yield', 'Main credit source', 'Farm records', 
-  #                         'Main advisory source', 'Extension provider', 'Advisory format', 
-  #                         'Advisory language']]
+      # Those registries represent:
+      missing_land = corn_subset['acreage'].isna().sum()
+      amount_ml = (missing_land / corn.shape[0])*100
+      print(f'The percentage of registries with missing values of cultivated land represent {amount_ml}')
+      # While removing a large number of missing values is generally not advisable, the lack of access to the research team for clarification and the limited usefulness of this data for our model, these rows will be removed from the dataframe.
 
-  #     # Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
-  #     corn_subset.columns = [name.lower() for name in corn_subset.columns]
-  #     corn_subset.columns = [name.replace(" ","_") for name in corn_subset.columns]
+      # The resulting dataframe is:
+      filter = corn_subset['acreage'].isna()
+      corn_subset = corn_subset[~filter]
 
-
-  #     # Those registries represent:
-  #     missing_land = corn_subset['acreage'].isna().sum()
-  #     amount_ml = (missing_land / corn.shape[0])*100
-  #     print(f'The percentage of registries with missing values of cultivated land represent {amount_ml}')
-  #     # While removing a large number of missing values is generally not advisable, the lack of access to the research team for clarification and the limited usefulness of this data for our model, these rows will be removed from the dataframe.
-
-  #     # The resulting dataframe is:
-  #     filter = corn_subset['acreage'].isna()
-  #     corn_subset = corn_subset[~filter]
-
-  #     # It makes sense that farmers in a developing country might have little to no formal education. Therefore, we can reasonably infer that many of them have not achieved any formal academic qualifications.
-  #     # We populate the missing values in the education column with "No educated":
-  #     corn_subset.loc[corn_subset['education'].isna()] = corn_subset.loc[corn_subset['education'].isna()].fillna('No educated')
-  #     print("The main statistics for out clean dataset are: ",corn_subset.describe(include='all'))
+      # It makes sense that farmers in a developing country might have little to no formal education. Therefore, we can reasonably infer that many of them have not achieved any formal academic qualifications.
+      # We populate the missing values in the education column with "No educated":
+      corn_subset.loc[corn_subset['education'].isna()] = corn_subset.loc[corn_subset['education'].isna()].fillna('No educated')
+      print("The main statistics for out clean dataset are: ",corn_subset.describe(include='all'))
 
 
-  #     ## Step 3: Feature understanding
-  #     # Now, it is important to understand how the selected variables behave:
-  #     print("The target variable is Yield")
-  #     print("There are no outliers visible at first glance")
+      ## Step 3: Feature understanding
+      # Now, it is important to understand how the selected variables behave:
+      print("The target variable is Yield")
+      print("There are no outliers visible at first glance")
 
-  #     categorical_columns = ['education', 'age_bracket', 'household_size', 'laborers', 
-  #                           'main_advisory_source', 'acreage']
+      categorical_columns = ['education', 'age_bracket', 'household_size', 'laborers', 
+                            'main_advisory_source', 'acreage']
 
-  #     # The significant variables identifyed were:
-  #     significant_var = ['education', 'age_bracket', 'household_size', 'laborers', 'main_advisory_source', 
-  #                   'acreage', 'fertilizer_amount', 'yield']
+      # The significant variables identifyed were:
+      significant_var = ['education', 'age_bracket', 'household_size', 'laborers', 'main_advisory_source', 
+                    'acreage', 'fertilizer_amount', 'yield']
 
-  #     # The not significant variables identifyed were:
-  #     not_significant_var = ['gender', 'main_credit_source', 'farm_records', 'extension_provider', 
-  #                           'advisory_format', 'advisory_language']
+      # The not significant variables identifyed were:
+      not_significant_var = ['gender', 'main_credit_source', 'farm_records', 'extension_provider', 
+                            'advisory_format', 'advisory_language']
 
-  #     # The cleaned dataset is filtered to include the significant variables identified above.
-  #     corn_cleaned = corn_subset[significant_var]
-  #     corn.reset_index
-  #     print("The final cleaned data is the following: ")
-  #     print(corn_cleaned.head())
+      # The cleaned dataset is filtered to include the significant variables identified above.
+      corn_cleaned = corn_subset[significant_var]
+      corn.reset_index
+      print("The final cleaned data is the following: ")
+      print(corn_cleaned.head())
 
 
-  #     # the Working dataset is prepared and splitted as follows:
-  #     # Preparation dataset
-  #     X = corn_cleaned.drop('yield', axis=1)
-  #     y = corn_cleaned['yield']
-  #     # Turning the dataframes into dictionaries:
-  #     X_dic = X.to_dict(orient='records')
-  #     # Instanciating the vectorizer for Hot Encoding:
-  #     dv = DictVectorizer(sparse=False)
-  #     # Applying the vectorizer:
-  #     X_encoded = dv.fit_transform(X_dic)
+      # the Working dataset is prepared and splitted as follows:
+      # Preparation dataset
+      X = corn_cleaned.drop('yield', axis=1)
+      y = corn_cleaned['yield']
+      # Turning the dataframes into dictionaries:
+      X_dic = X.to_dict(orient='records')
+      # Instanciating the vectorizer for Hot Encoding:
+      dv = DictVectorizer(sparse=False)
+      # Applying the vectorizer:
+      X_encoded_val = dv.fit_transform(X_dic)
 
-  #     # More robust saving that handles both DataFrames and numpy arrays
-  #     def save_to_csv(data, filename):
-  #         if hasattr(data, 'to_csv'):  # It's already a DataFrame
-  #             data.to_csv(filename, index=False)
-  #         else:  # It's a numpy array or similar
-  #             pd.DataFrame(data).to_csv(filename, index=False)
+      # More robust saving that handles both DataFrames and numpy arrays
+      def save_to_csv(data, filename):
+          if hasattr(data, 'to_csv'):  # It's already a DataFrame
+              data.to_csv(filename, index=False)
+          else:  # It's a numpy array or similar
+              pd.DataFrame(data).to_csv(filename, index=False)
 
-  #     # Save feature datasets
-  #     save_to_csv(X_encoded, 'X_train.csv')
+      # Save feature datasets
+      save_to_csv(X_encoded_val, 'X_encoded_val.csv')
 
-  #     # Save target datasets
-  #     y.to_csv('target.csv', index=False)
+      # Save target datasets
+      y.to_csv('target_val.csv', index=False)
     
-  #   outputFiles:
-  #     - "target.csv"
-  #     - "X_encoded.csv"
+    outputFiles:
+      - "target_val.csv"
+      - "X_encoded_val.csv"
   
   
 
