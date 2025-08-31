@@ -11,7 +11,7 @@ from evidently.ui.workspace import RemoteWorkspace
 from evidently.sdk.models import PanelMetric
 from evidently.sdk.panels import DashboardPanelPlot
 from evidently.metrics import *
-from evidently.presets import DataDriftPreset, RegressionPreset
+from evidently.presets import DataDriftPreset, RegressionPreset, DataSummaryPreset
 from sklearn.model_selection import train_test_split
 
 # Configuration for remote Evidently service
@@ -204,7 +204,9 @@ try:
         MAE(column="prediction"),
         RMSE(column="prediction"),
         R2Score(column="prediction"),
-        MeanError(column="prediction")
+        MeanError(column="prediction"),
+        # Data summary info
+        DataSummaryPreset(),
     ])
     
     print("Running combined drift and regression analysis...")
@@ -289,7 +291,8 @@ except Exception as e:
         MAE(column="prediction"),
         RMSE(column="prediction"),
         R2Score(column="prediction"),
-        MeanError(column="prediction")
+        MeanError(column="prediction"),
+        DataSummaryPreset(),
     ])
     
     report_result = report.run(
