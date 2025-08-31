@@ -8,16 +8,18 @@ inputs:
     type: STRING
     required: true
     description: "Name of the model in MLflow registry"
-  - id: dataset_path
+  - id: file_name
     type: STRING
-    required: false
-    defaults: "corn_add.csv"
-    description: "Path to the new dataset for evaluation"
+    required: true
+    description: "Name of CSV file you want to use for testing (eg: 2024_01, 2024_02, etc.)"
 
 variables:
   mlflow_url: "https://mlflow-server-453290981886.us-central1.run.app/"
   evidently_ui_url: "https://evidently-ui-453290981886.us-central1.run.app/"
   evidently_url: "https://evidently-monitoring-c4tqdte5jq-uc.a.run.app"
+  bucket_name: "corn-yield-testing-datasets"
+  base_path: "data_2024"
+  file_extension: ".csv"
 
 tasks:
   - id: extract_production_model
@@ -311,6 +313,12 @@ tasks:
   #     All reports and dashboards have been uploaded to your Google Cloud Evidently services.
   #   level: INFO
 
+  - id: download_test_data_from_gcs
+    type: io.kestra.plugin.gcp.gcs.Download
+    from: "gs://{{ vars.bucket_name }}/{{ vars.base_path }}/corn_{{ inputs.file_name }}{{ vars.file_extension }}"
+    serviceAccount: "{{ kv('GCP_SERVICE_ACCOUNT_KEY') }}"
+    projectId: "{{ kv('GCP_PROJECT_ID') }}"
+
   - id: load_and_prepare_test_data
     type: "io.kestra.plugin.scripts.python.Script"
     containerImage: ghcr.io/kestra-io/pydata:latest
@@ -319,14 +327,11 @@ tasks:
       type: io.kestra.plugin.core.runner.Process
     beforeCommands:
       - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn joblib
-    namespaceFiles:
-      enabled: true
-      include:
-        - corn_add.csv 
     inputFiles:
       # Get the vectorizer from training to ensure consistent encoding
       vectorizer.pkl: "{{ outputs.extract_production_model.outputFiles['mydir/artifacts/vectorizer.pkl'] }}"
       feature_names.npy: "{{ outputs.load_and_prepare_base_data.outputFiles['feature_names.npy'] }}"
+      corn_add.csv: "{{ outputs.download_test_data_from_gcs.uri}}"
     script: |
       import pandas as pd
       import joblib
