@@ -7,10 +7,12 @@ inputs:
   - id: model_name
     type: STRING
     required: true
+    defaults: corn-yield-predictor
     description: "Name of the model in MLflow registry"
   - id: file_name
     type: STRING
     required: true
+    defaults: 2024_01
     description: "Name of CSV file you want to use for testing (eg: 2024_01, 2024_02, etc.)"
 
 variables:
@@ -271,7 +273,7 @@ tasks:
       # Also save feature names for reference
       feature_names = dv.get_feature_names_out()
       np.save('feature_names.npy', feature_names)
-  
+
   - id: prepare_base_report
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
@@ -295,27 +297,14 @@ tasks:
     commands:
       - python monitoring.py
     outputFiles:
-    outputFiles:
     - project_metadata.json
     - "workspace/**"
     - "workspace.zip"
 
-  # - id: notify_completion
-  #   type: "io.kestra.plugin.core.log.Log"
-  #   message: |
-  #     🎉 Evidently Monitoring Pipeline Complete!
-      
-  #     📊 Dashboard URL: https://evidently-ui-c4tqdte5jq-uc.a.run.app
-  #     🔧 Monitoring API: https://evidently-monitoring-c4tqdte5jq-uc.a.run.app
-      
-  #     Project ID: {{ outputs.verify_cloud_upload.vars.project_id }}
-      
-  #     All reports and dashboards have been uploaded to your Google Cloud Evidently services.
-  #   level: INFO
-
   - id: download_test_data_from_gcs
     type: io.kestra.plugin.gcp.gcs.Download
     from: "gs://{{ vars.bucket_name }}/{{ vars.base_path }}/corn_{{ inputs.file_name }}{{ vars.file_extension }}"
+    # to: "data_{{ inputs.file_name }}.csv"
     serviceAccount: "{{ kv('GCP_SERVICE_ACCOUNT_KEY') }}"
     projectId: "{{ kv('GCP_PROJECT_ID') }}"
 
@@ -327,6 +316,10 @@ tasks:
       type: io.kestra.plugin.core.runner.Process
     beforeCommands:
       - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn joblib
+    # namespaceFiles:
+    #   enabled: true
+    #   include:
+    #     - corn_add.csv 
     inputFiles:
       # Get the vectorizer from training to ensure consistent encoding
       vectorizer.pkl: "{{ outputs.extract_production_model.outputFiles['mydir/artifacts/vectorizer.pkl'] }}"
@@ -446,7 +439,7 @@ tasks:
   - id: compare_model_performance
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
-    description: "Compare current model performance metrics (RMSE, R2) with baseline values from first report"
+    description: "Compare current model performance metrics (RMSE, R2) with baseline values and send email alerts when drift or degradation is detected"
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
     namespaceFiles:
@@ -455,10 +448,45 @@ tasks:
         - model_performance_comparison.py
     inputFiles:
       drift_metadata.json: "{{ outputs.analyze_data_drift.outputFiles['drift_metadata.json'] }}"
+    env:
+      # Email alerting configuration
+      SMTP_SERVER: "{{ kv('SMTP_SERVER') }}"           # e.g., smtp.gmail.com
+      SMTP_PORT: "{{ kv('SMTP_PORT') }}"               # e.g., 587 for TLS
+      SENDER_EMAIL: "{{ kv('SENDER_EMAIL') }}"         # Your email address
+      SENDER_PASSWORD: "{{ kv('SENDER_PASSWORD') }}"   # App password or email password
+      RECIPIENT_EMAILS: "{{ kv('RECIPIENT_EMAILS') }}" # Comma-separated: user1@email.com,user2@email.com
+      
+      # Custom alert thresholds (optional - defaults to 5%)
+      RMSE_DEGRADATION_THRESHOLD: "0.05"  # 5% increase triggers alert
+      R2_DEGRADATION_THRESHOLD: "0.05"    # 5% decrease triggers alert  
+      MAE_DEGRADATION_THRESHOLD: "0.05"   # 5% increase triggers alert
     beforeCommands:
-      - pip install pandas==2.3.1 numpy==2.2.6 scikit-learn==1.7.1 
+      - pip install pandas==2.3.1 numpy==2.2.6 scikit-learn==1.7.1
       - pip install evidently==0.7.9 requests
     commands:
       - python model_performance_comparison.py
     outputFiles:
       - performance_comparison.json
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempt: 3
+
+  # Conditional tasks based on alert status
+  - id: handle_critical_alerts
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ read(outputs.compare_model_performance.outputFiles['performance_comparison.json']) | jq('.alerts.alert_count > 0') }}"
+    then:
+      - id: log_critical_alert
+        type: io.kestra.plugin.core.log.Log
+        message: "CRITICAL: Model performance alerts detected! Email notifications sent. Check dashboard immediately."
+        level: ERROR
+
+  - id: success_notification
+    type: io.kestra.plugin.core.flow.If  
+    condition: "{{ read(outputs.compare_model_performance.outputFiles['performance_comparison.json']) | jq('.alerts.alert_count == 0') }}"
+    then:
+      - id: log_success
+        type: io.kestra.plugin.core.log.Log
+        message: "Model performance monitoring completed successfully. No alerts triggered."
+        level: INFO

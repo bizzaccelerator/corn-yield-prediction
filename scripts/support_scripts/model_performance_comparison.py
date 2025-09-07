@@ -1,15 +1,8 @@
-"""
-compare_evidently_reports.py
-
-Connects to Evidently Cloud Run UI, fetches the project's report IDs,
-downloads JSON snapshots from GCS, extracts current performance metrics
-(RMSE, R2, MAE) robustly, then compares the oldest report (baseline)
-against the newest report (current).
-"""
 from datetime import datetime
 import json
 import re
 import requests
+import os
 from typing import Dict, Any, Optional, Tuple, List
 
 from evidently.ui.workspace import RemoteWorkspace
@@ -18,6 +11,24 @@ from evidently.ui.workspace import RemoteWorkspace
 EVIDENTLY_SERVICE_URL = "https://evidently-ui-453290981886.us-central1.run.app"
 GCS_BUCKET_NAME = "corn-yield-prediction-kenia-evidently-reports"
 PROJECT_NAME = "Corn Yield ML Monitoring"
+
+# Alert configuration
+ALERT_CONFIG = {
+    'rmse_degradation_threshold': float(os.getenv('RMSE_DEGRADATION_THRESHOLD', '0.05')),  # 5% increase triggers alert
+    'r2_degradation_threshold': float(os.getenv('R2_DEGRADATION_THRESHOLD', '0.05')),      # 5% decrease triggers alert
+    'mae_degradation_threshold': float(os.getenv('MAE_DEGRADATION_THRESHOLD', '0.05')),    # 5% increase triggers alert
+    'drift_alert_enabled': True,
+    'performance_alert_enabled': True
+}
+
+# Email alert configuration
+EMAIL_CONFIG = {
+    'smtp_server': os.getenv('SMTP_SERVER'),
+    'smtp_port': int(os.getenv('SMTP_PORT', '587')),
+    'sender_email': os.getenv('SENDER_EMAIL'),
+    'sender_password': os.getenv('SENDER_PASSWORD'),
+    'recipient_emails': os.getenv('RECIPIENT_EMAILS', '').split(',')
+}
 # ======================
 
 def to_float(value: Any) -> Optional[float]:
@@ -196,10 +207,6 @@ def extract_performance_metrics(report_data: Dict) -> Dict[str, Any]:
                 # not performance but we keep for completeness
                 register(key, 'count', to_float(m_obj['count'].get('value')), '(count)')
 
-    # Secondary search: sometimes reports put metrics in nested widgets or arbitrary places.
-    # We'll do a more generic search across the whole JSON for counters like {"value":"36.292"}
-    # but only as fallback (skipped here for brevity) — metric_results is the primary source.
-
     # Build final chosen metrics (prefer current -> value -> reference)
     for metric_key in ('rmse', 'r2', 'mae'):
         metric_info = found.get(metric_key, {})
@@ -217,14 +224,11 @@ def extract_performance_metrics(report_data: Dict) -> Dict[str, Any]:
         results[f"{metric_key}_reference"] = metric_info.get('reference')
         results[metric_key] = chosen
 
-    # Drift detection heuristics (search for 'drift' keywords)
     drift_detected = False
-    # simple check: any metric_result or widgets with 'drift' phrase in label/params
     try:
         # metric_results text search
         dump = json.dumps(metric_results)
         if 'drift' in dump.lower() and ('detected' in dump.lower() or 'drift' in dump.lower()):
-            # naive decision: presence of "drift" text — set True only if phrase "drift" with "detected" or non-zero drift score
             if 'detected' in dump.lower():
                 drift_detected = True
             else:
@@ -259,9 +263,165 @@ def calculate_performance_change(baseline: float, current: float, metric_name: s
 
     return absolute_change, pct_change, direction
 
+def send_email_alert(message: str, subject: str) -> bool:
+    """Send email alert using SMTP."""
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        from email.utils import formataddr
+        
+        # Validate configuration
+        if not all([EMAIL_CONFIG['smtp_server'], EMAIL_CONFIG['sender_email'], 
+                   EMAIL_CONFIG['sender_password']]):
+            print("[warn] Email configuration incomplete (missing SMTP server, sender email, or password)")
+            return False
+        
+        # Filter out empty recipient emails
+        recipients = [email.strip() for email in EMAIL_CONFIG['recipient_emails'] if email.strip()]
+        if not recipients:
+            print("[warn] No valid recipient emails configured")
+            return False
+
+        # Create email message
+        msg = MIMEMultipart('alternative')
+        msg['From'] = formataddr(("ML Monitoring System", EMAIL_CONFIG['sender_email']))
+        msg['To'] = ', '.join(recipients)
+        msg['Subject'] = subject
+
+        # Create HTML and plain text versions
+        html_body = f"""
+        <html>
+          <head></head>
+          <body>
+            <h2 style="color: #d32f2f;">🚨 ML Model Alert - Corn Yield Prediction</h2>
+            <div style="background-color: #ffebee; padding: 15px; border-left: 4px solid #f44336; margin: 10px 0;">
+              <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{message}</pre>
+            </div>
+            <hr>
+            <p><strong>Dashboard:</strong> <a href="{EVIDENTLY_SERVICE_URL}" target="_blank">{EVIDENTLY_SERVICE_URL}</a></p>
+            <p><strong>Timestamp:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
+            <p style="color: #666; font-size: 12px;">This is an automated alert from the ML monitoring system.</p>
+          </body>
+        </html>
+        """
+        
+        plain_body = f"""
+        ML Model Alert - Corn Yield Prediction
+        =====================================
+        
+        {message}
+        
+        Dashboard: {EVIDENTLY_SERVICE_URL}
+        
+        Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}
+        
+        ---
+        This is an automated alert from the ML monitoring system.
+        """
+        
+        # Attach both versions
+        msg.attach(MIMEText(plain_body, 'plain'))
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Send email
+        print(f"[info] Sending email alert to: {', '.join(recipients)}")
+        
+        server = smtplib.SMTP(EMAIL_CONFIG['smtp_server'], EMAIL_CONFIG['smtp_port'])
+        server.starttls()  # Enable TLS encryption
+        server.login(EMAIL_CONFIG['sender_email'], EMAIL_CONFIG['sender_password'])
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"[info] Email alert sent successfully")
+        return True
+        
+    except Exception as e:
+        print(f"[error] Failed to send email alert: {e}")
+        return False
+
+def check_and_send_alerts(baseline: Dict, current: Dict, comparison_results: Dict):
+    """Check for alerting conditions and send email notifications."""
+    alerts_sent = []
+    alert_messages = []
+    
+    # Check for drift alerts
+    if (ALERT_CONFIG['drift_alert_enabled'] and 
+        current.get('drift_detected', False) and 
+        not baseline.get('drift_detected', False)):
+        
+        message = (f"🔍 DATA DRIFT DETECTED\n\n"
+                  f"New drift has been detected in the current model report.\n\n"
+                  f"Baseline report: {baseline.get('report_id')} (no drift)\n"
+                  f"Current report: {current.get('report_id')} (drift detected)\n\n"
+                  f"Please investigate the data quality and model performance immediately.")
+        alert_messages.append(message)
+    
+    # Check for performance degradation alerts
+    if ALERT_CONFIG['performance_alert_enabled']:
+        performance_alerts = []
+        
+        for metric in ['rmse', 'r2', 'mae']:
+            threshold_key = f"{metric}_degradation_threshold"
+            if threshold_key not in ALERT_CONFIG:
+                continue
+                
+            baseline_val = baseline.get(metric)
+            current_val = current.get(metric)
+            
+            if baseline_val is None or current_val is None:
+                continue
+                
+            _, pct_change, direction = calculate_performance_change(baseline_val, current_val, metric)
+            
+            if pct_change is None:
+                continue
+                
+            threshold = ALERT_CONFIG[threshold_key] * 100  # Convert to percentage
+            
+            # Check if degradation exceeds threshold
+            is_degraded = False
+            if metric == 'r2':  # Higher is better for R2
+                is_degraded = (direction == "degradation" and abs(pct_change) > threshold)
+            else:  # Lower is better for RMSE/MAE
+                is_degraded = (direction == "degradation" and abs(pct_change) > threshold)
+            
+            if is_degraded:
+                performance_alerts.append(
+                    f"{metric.upper()}: {baseline_val:.6f} → {current_val:.6f} "
+                    f"({pct_change:+.2f}%, threshold: ±{threshold:.1f}%)"
+                )
+        
+        if performance_alerts:
+            message = (f"📉 PERFORMANCE DEGRADATION DETECTED\n\n"
+                      f"The following metrics have degraded beyond acceptable thresholds:\n\n"
+                      f"{'• ' + chr(10) + '• '.join(performance_alerts)}\n\n"
+                      f"Baseline report: {baseline.get('report_id')} ({baseline.get('timestamp')})\n"
+                      f"Current report: {current.get('report_id')} ({current.get('timestamp')})\n\n"
+                      f"Please review model performance and consider retraining.")
+            alert_messages.append(message)
+    
+    # Send email alerts if any conditions were met
+    for i, message in enumerate(alert_messages, 1):
+        print(f"\n[ALERT {i}] Sending email notification...")
+        print(f"Message preview: {message[:200]}{'...' if len(message) > 200 else ''}")
+        
+        # Create subject based on alert type
+        if "DRIFT" in message:
+            subject = "🔍 ML Model Alert: Data Drift Detected - Corn Yield Prediction"
+        else:
+            subject = "📉 ML Model Alert: Performance Degradation - Corn Yield Prediction"
+        
+        if send_email_alert(message, subject):
+            alerts_sent.append("Email")
+        else:
+            print(f"[error] Failed to send email alert {i}")
+    
+    return alert_messages, alerts_sent
+
 def main():
     print("=" * 60)
-    print("MODEL PERFORMANCE COMPARISON FROM GCS REPORTS (robust extractor)")
+    print("MODEL PERFORMANCE COMPARISON FROM GCS REPORTS (with email alerting)")
     print("=" * 60)
 
     # Connect to Evidently
@@ -292,7 +452,6 @@ def main():
             print(f"[warn] Could not fetch report {rid}")
             continue
         metrics = extract_performance_metrics(report_json)
-        # only include if at least one performance value found
         if any(metrics.get(k) is not None for k in ('rmse','r2','mae')) or metrics.get('drift_detected'):
             all_metrics.append(metrics)
         else:
@@ -315,6 +474,7 @@ def main():
 
     # Compare metrics
     print("\nPERFORMANCE COMPARISON:")
+    comparison_results = {}
     made = False
     for m in ('rmse', 'r2', 'mae'):
         b = baseline.get(m)
@@ -331,6 +491,14 @@ def main():
         print(f"    Current : {c:.6f}")
         print(f"    Change  : {abs_ch:+.6f} ({pct_ch:+.2f}%)")
         print(f"    Status  : {direction.upper()}")
+        
+        comparison_results[m] = {
+            'baseline': b,
+            'current': c,
+            'absolute_change': abs_ch,
+            'percentage_change': pct_ch,
+            'direction': direction
+        }
         made = True
 
     # Drift
@@ -347,6 +515,41 @@ def main():
 
     if not made:
         print("\nNo comparable performance metric pairs found between baseline and current reports.")
+
+    # Check for alerts and send notifications
+    alert_messages, alerts_sent = check_and_send_alerts(baseline, current, comparison_results)
+    
+    # Prepare output for Kestra
+    output_data = {
+        'timestamp': datetime.now().isoformat(),
+        'project_id': project_id,
+        'baseline_report': {
+            'id': baseline.get('report_id'),
+            'timestamp': baseline.get('timestamp'),
+            'metrics': {k: baseline.get(k) for k in ['rmse', 'r2', 'mae']},
+            'drift_detected': baseline.get('drift_detected', False)
+        },
+        'current_report': {
+            'id': current.get('report_id'),
+            'timestamp': current.get('timestamp'),
+            'metrics': {k: current.get(k) for k in ['rmse', 'r2', 'mae']},
+            'drift_detected': current.get('drift_detected', False)
+        },
+        'comparison_results': comparison_results,
+        'alerts': {
+            'messages': alert_messages,
+            'channels_notified': alerts_sent,
+            'alert_count': len(alert_messages)
+        }
+    }
+    
+    # Save results to output file
+    with open('performance_comparison.json', 'w') as f:
+        json.dump(output_data, f, indent=2, default=str)
+    
+    print(f"\n[info] Results saved to performance_comparison.json")
+    if alert_messages:
+        print(f"[info] {len(alert_messages)} alert(s) generated and sent to: {', '.join(alerts_sent)}")
 
     print("\n" + "=" * 60)
     print(f"Evidently dashboard: {EVIDENTLY_SERVICE_URL}/projects/{project.id}")
