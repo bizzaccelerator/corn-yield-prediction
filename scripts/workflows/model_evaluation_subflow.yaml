@@ -442,3 +442,23 @@ tasks:
     outputFiles:
       - drift_metadata.json
       - "drift_workspace/**"
+
+  - id: compare_model_performance
+    type: io.kestra.plugin.scripts.python.Commands
+    containerImage: ghcr.io/kestra-io/pydata:latest
+    description: "Compare current model performance metrics (RMSE, R2) with baseline values from first report"
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - model_performance_comparison.py
+    inputFiles:
+      drift_metadata.json: "{{ outputs.analyze_data_drift.outputFiles['drift_metadata.json'] }}"
+    beforeCommands:
+      - pip install pandas==2.3.1 numpy==2.2.6 scikit-learn==1.7.1 
+      - pip install evidently==0.7.9 requests
+    commands:
+      - python model_performance_comparison.py
+    outputFiles:
+      - performance_comparison.json
