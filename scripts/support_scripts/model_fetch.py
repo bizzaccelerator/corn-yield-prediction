@@ -73,9 +73,9 @@ else:
         print(f"RMSE improvement over production: {improvement*100:.2f}%")
         if improvement > comparison_threshold:
             should_deploy = True
-            print(f"✅ Candidate model shows {improvement*100:.2f}% improvement (threshold: {comparison_threshold*100:.2f}%)")
+            print(f"Candidate model shows {improvement*100:.2f}% improvement (threshold: {comparison_threshold*100:.2f}%)")
         else:
-            print(f"❌ Candidate model improvement {improvement*100:.2f}% is below threshold {comparison_threshold*100:.2f}%")
+            print(f"Candidate model improvement {improvement*100:.2f}% is below threshold {comparison_threshold*100:.2f}%")
 
 # --- Output decision ---
 decision = {
@@ -94,6 +94,6 @@ with open('deployment_decision.json', 'w') as f:
     json.dump(decision, f, indent=2)
 
 if should_deploy:
-    print("✅ Candidate model will be promoted to Production and deployed.")
+    print("Candidate model will be promoted to Production and deployed.")
 else:
-    print("❌ Candidate model will NOT be promoted to Production or deployed.")
+    print("Candidate model will NOT be promoted to Production or deployed.")

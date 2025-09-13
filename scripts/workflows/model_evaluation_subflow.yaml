@@ -25,254 +25,48 @@ variables:
 
 tasks:
   - id: extract_production_model
-    type: "io.kestra.plugin.scripts.python.Script"
+    type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
     description: "Extract current production model from MLflow registry"
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - extract_production_model.py
+    env:
+      MLFLOW_URL: "{{ vars.mlflow_url }}"
+      MODEL_NAME: "{{ inputs.model_name }}"
     beforeCommands:
       - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn 
-    script: |
-      import mlflow
-      import mlflow.tracking
-      from mlflow.artifacts import download_artifacts
-      import json
-      import os
-      import joblib
-      import shutil
-      import pickle
-      
-      os.makedirs('mydir/artifacts', exist_ok=True)
-
-      # Set MLflow tracking URI
-      mlflow_tracking_uri = mlflow.set_tracking_uri("{{ vars.mlflow_url }}")
-      model_name = "{{ inputs.model_name }}"
-      
-      # Get production model version
-      client = mlflow.MlflowClient()
-      
-      try:
-          # Get latest version in Production stage
-          production_versions = client.get_latest_versions(
-              model_name, 
-              stages=["Production"]
-          )
-          
-          if not production_versions:
-              raise Exception(f"No model found in Production stage for {model_name}")
-          
-          latest_prod_version = production_versions[0]
-          model_version = latest_prod_version.version          
-          run_id = latest_prod_version.run_id
-
-          print(f"MLflow URI: {mlflow_tracking_uri}")
-          print(f"Run ID: {run_id}")
-     
-          print(f"Found production model: {model_name} version {model_version}")
-          
-          # Download the model
-          print("Downloading model directory...")
-          model_dir_path = f"runs:/{run_id}/model"
-          local_model_dir = download_artifacts(model_dir_path)
-              
-          print(f"Downloaded model directory to: {local_model_dir}")
-          print(f"Model directory contents: {os.listdir(local_model_dir)}")
-
-          # Load MLflow model and save as simple pickle
-          print("Loading and converting MLflow model...")
-          model = mlflow.sklearn.load_model(model_dir_path)
-
-          # Save the model
-          model_output_path = 'mydir/artifacts/model.pkl'
-          joblib.dump(model, model_output_path)
-          print(f"Model saved to: {model_output_path}")
-
-          # Copy vectorizer from downloaded model directory
-          vectorizer_source = os.path.join(local_model_dir, 'vectorizer.pkl')
-          vectorizer_output_path = 'mydir/artifacts/vectorizer.pkl'
-          
-          vectorizer_found = False
-          if os.path.exists(vectorizer_source):
-              shutil.copy2(vectorizer_source, vectorizer_output_path)
-              vectorizer_found = True
-              print(f"Vectorizer copied from {vectorizer_source} to {vectorizer_output_path}")
-          else:
-              print(f"Vectorizer not found at {vectorizer_source}")
-              # List what's actually in the model directory
-              print(f"Contents of {local_model_dir}: {os.listdir(local_model_dir)}")
-
-          # Verify both files exist with sizes
-          for artifact_name in ['model.pkl', 'vectorizer.pkl']:
-              artifact_path = f'mydir/artifacts/{artifact_name}'
-              if os.path.exists(artifact_path):
-                  size = os.path.getsize(artifact_path)
-                  print(f"{artifact_name}: {size} bytes")
-              else:
-                  if artifact_name == 'vectorizer.pkl':
-                      print(f"Warning: {artifact_name} not found")
-                  else:
-                      raise FileNotFoundError(f"{artifact_name} missing after download")
-
-          print("=== ARTIFACT DOWNLOAD COMPLETED SUCCESSFULLY ===")
-          
-          # Save model info for next tasks
-          model_info = {
-              "model_name": model_name,
-              "model_version": model_version,
-              "model_uri": model_dir_path,
-              "model_stage": "Production",
-              "vectorizer_found": vectorizer_found
-          }
-          
-          with open("model_info.json", "w") as f:
-              json.dump(model_info, f)
-
-          # Show final directory contents
-          print(f"Root directory contents: {os.listdir('.')}")
-          print(f"Artifacts directory contents: {os.listdir('mydir/artifacts')}")
-
-      except Exception as e:
-          print(f"Error extracting model: {str(e)}")
-          raise e
+    commands:
+      - python extract_production_model.py
     outputFiles:
     - "model_info.json"
     - "mydir/artifacts/model.pkl"
     - "mydir/artifacts/vectorizer.pkl"
 
   - id: load_and_prepare_base_data
-    type: "io.kestra.plugin.scripts.python.Script"
+    type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
     description: "Extract data used for training the model in production"
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - load_and_prepare_base_data.py
     env:
       KAGGLE_USERNAME: "{{ kv('KAGGLE_USERNAME') }}"
       KAGGLE_KEY: "{{ kv('KAGGLE_KEY') }}"
     beforeCommands:
-    - pip install kagglehub
-    - pip install kaggle 
-    - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn numpy
+    - pip install kagglehub kaggle mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn numpy
+    commands:
+      - python load_and_prepare_base_data.py
     outputFiles:
     - "X_encoded.npy"
     - "y.npy" 
     - "feature_names.npy"
-    script: |
-      import os
-      import kaggle
-      import pandas as pd
-      import numpy as np
-      from sklearn.feature_extraction import DictVectorizer
-
-      kaggle.api.authenticate()
-      handle = "japondo/corn-farming-data"
-      print("Los archivos a descargar son: ", kaggle.api.dataset_list_files(handle).files)
-      kaggle.api.dataset_download_files(handle, path=".", unzip=True)
-
-      # Find the CSV file in the current directory
-      csv_files = [f for f in os.listdir('.') if f.endswith('.csv')]
-      if not csv_files:
-          raise FileNotFoundError("No CSV files found after download")
-
-      # Use the first CSV file found (or specify the exact filename if you know it)
-      csv_filename = csv_files[0]
-      print(f"Loading CSV file: {csv_filename}")
-
-      # Load the dataset
-      corn = pd.read_csv(csv_filename, sep=",")
-
-      ## Step 1: Understanding the data
-      print("The dataset size is: ", corn.shape)
-
-      print("The columns in the dataset size are: ", corn.columns)
-
-      # Using the info() method, we can quickly identify the data type of each column and detect null values:"
-      corn.info()
-
-      print("The number of null values in the dataset is confirmed as: ",corn.isna().sum())
-
-
-      ## Step 2: Data preparation
-      # Now that I have a general understanding of the data, some cleaning is needed before proceeding with further analysis.
-
-
-      # Then, our subset selected for analysis is:
-      corn_subset = corn[['Education', 'Gender', 'Age bracket',
-                          'Household size', 'Acreage', 'Fertilizer amount', 'Laborers',
-                          'Yield', 'Main credit source', 'Farm records', 
-                          'Main advisory source', 'Extension provider', 'Advisory format', 
-                          'Advisory language']]
-
-      # Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
-      corn_subset.columns = [name.lower() for name in corn_subset.columns]
-      corn_subset.columns = [name.replace(" ","_") for name in corn_subset.columns]
-
-
-      # Those registries represent:
-      missing_land = corn_subset['acreage'].isna().sum()
-      amount_ml = (missing_land / corn.shape[0])*100
-      print(f'The percentage of registries with missing values of cultivated land represent {amount_ml}')
-      # While removing a large number of missing values is generally not advisable, the lack of access to the research team for clarification and the limited usefulness of this data for our model, these rows will be removed from the dataframe.
-
-      # The resulting dataframe is:
-      filter = corn_subset['acreage'].isna()
-      corn_subset = corn_subset[~filter]
-
-      # It makes sense that farmers in a developing country might have little to no formal education. Therefore, we can reasonably infer that many of them have not achieved any formal academic qualifications.
-      # We populate the missing values in the education column with "No educated":
-      corn_subset.loc[corn_subset['education'].isna()] = corn_subset.loc[corn_subset['education'].isna()].fillna('No educated')
-
-      print("The main statistics for out clean dataset are: ",corn_subset.describe(include='all'))
-
-
-      ## Step 3: Feature understanding
-      
-      # Now, it is important to understand how the selected variables behave:
-      print("The target variable is Yield")
-      print("There are no outliers visible at first glance")
-
-      categorical_columns = ['education', 'age_bracket', 'household_size', 'laborers', 
-                            'main_advisory_source', 'acreage']
-
-      # The significant variables identifyed were:
-      significant_var = ['education', 'age_bracket', 'household_size', 'laborers', 'main_advisory_source', 
-                    'acreage', 'fertilizer_amount', 'yield']
-
-      # The not significant variables identifyed were:
-      not_significant_var = ['gender', 'main_credit_source', 'farm_records', 'extension_provider', 
-                            'advisory_format', 'advisory_language']
-
-      # The cleaned dataset is filtered to include the significant variables identified above.
-      corn_cleaned = corn_subset[significant_var]
-      corn.reset_index
-      print("The final cleaned data is the following: ")
-      print(corn_cleaned.head())
-
-
-      # the Working dataset is prepared and splitted as follows:
-
-      # Preparation dataset
-      X = corn_cleaned.drop('yield', axis=1)
-      y = corn_cleaned['yield']
-
-      # Turning the dataframes into dictionaries:
-      X_dic = X.to_dict(orient='records')
-
-
-      # Instanciating the vectorizer for Hot Encoding:
-      dv = DictVectorizer(sparse=False)
-
-      # Applying the vectorizer:
-      X_encoded = dv.fit_transform(X_dic)
-  
-      # Save X_encoded as numpy array
-      np.save('X_encoded.npy', X_encoded)
-
-      # Save y as numpy array  
-      np.save('y.npy', y.values)
-
-      # Also save feature names for reference
-      feature_names = dv.get_feature_names_out()
-      np.save('feature_names.npy', feature_names)
 
   - id: prepare_base_report
     type: io.kestra.plugin.scripts.python.Commands
@@ -304,108 +98,31 @@ tasks:
   - id: download_test_data_from_gcs
     type: io.kestra.plugin.gcp.gcs.Download
     from: "gs://{{ vars.bucket_name }}/{{ vars.base_path }}/corn_{{ inputs.file_name }}{{ vars.file_extension }}"
-    # to: "data_{{ inputs.file_name }}.csv"
     serviceAccount: "{{ kv('GCP_SERVICE_ACCOUNT_KEY') }}"
     projectId: "{{ kv('GCP_PROJECT_ID') }}"
 
   - id: load_and_prepare_test_data
-    type: "io.kestra.plugin.scripts.python.Script"
+    type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
     description: "Load new dataset and prepare for evaluation using TRAINING vectorizer"
     taskRunner:
       type: io.kestra.plugin.core.runner.Process
+    namespaceFiles:
+      enabled: true
+      include:
+        - load_and_prepare_test_data.py
     beforeCommands:
       - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn joblib
-    # namespaceFiles:
-    #   enabled: true
-    #   include:
-    #     - corn_add.csv 
     inputFiles:
-      # Get the vectorizer from training to ensure consistent encoding
       vectorizer.pkl: "{{ outputs.extract_production_model.outputFiles['mydir/artifacts/vectorizer.pkl'] }}"
       feature_names.npy: "{{ outputs.load_and_prepare_base_data.outputFiles['feature_names.npy'] }}"
       corn_add.csv: "{{ outputs.download_test_data_from_gcs.uri}}"
-    script: |
-      import pandas as pd
-      import joblib
-      import numpy as np
-      from sklearn.feature_extraction import DictVectorizer
-      from sklearn.model_selection import train_test_split
-
-      print("Loading new dataset...")
-      corn = pd.read_csv("corn_add.csv", sep="," )
-
-      ## Step 1: Understanding the data
-      print("The dataset size is: ", corn.shape)
-      print("The columns in the dataset size are: ", corn.columns)
-      corn.info()
-      print("The number of null values in the dataset is confirmed as: ",corn.isna().sum())
-
-      ## Step 2: Data preparation (EXACT same as training)
-      # Then, our subset selected for analysis is:
-      corn_subset = corn[['Education', 'Gender', 'Age bracket',
-                          'Household size', 'Acreage', 'Fertilizer amount', 'Laborers',
-                          'Yield', 'Main credit source', 'Farm records', 
-                          'Main advisory source', 'Extension provider', 'Advisory format', 
-                          'Advisory language']]
-
-      # Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
-      corn_subset.columns = [name.lower() for name in corn_subset.columns]
-      corn_subset.columns = [name.replace(" ","_") for name in corn_subset.columns]
-
-      # Those registries represent:
-      missing_land = corn_subset['acreage'].isna().sum()
-      amount_ml = (missing_land / corn.shape[0])*100
-      print(f'The percentage of registries with missing values of cultivated land represent {amount_ml}')
-      
-      # The resulting dataframe is:
-      filter_missing = corn_subset['acreage'].isna()
-      corn_subset = corn_subset[~filter_missing]
-
-      # Handle missing education values
-      corn_subset.loc[corn_subset['education'].isna()] = corn_subset.loc[corn_subset['education'].isna()].fillna('No educated')
-      print("The main statistics for out clean dataset are: ",corn_subset.describe(include='all'))
-
-      ## Step 3: Feature understanding (EXACT same feature selection as training)
-      print("The target variable is Yield")
-
-      # The significant variables identified were (MUST match training exactly):
-      significant_var = ['education', 'age_bracket', 'household_size', 'laborers', 'main_advisory_source', 
-                    'acreage', 'fertilizer_amount', 'yield']
-
-      # The cleaned dataset is filtered to include the significant variables identified above.
-      corn_cleaned = corn_subset[significant_var]
-      corn_cleaned.reset_index(drop=True, inplace=True)
-      print("The final cleaned data is the following: ")
-      print(corn_cleaned.head())
-
-      # Preparation dataset
-      X = corn_cleaned.drop('yield', axis=1)
-      y = corn_cleaned['yield']
-      
-      # Turning the dataframes into dictionaries:
-      X_dic = X.to_dict(orient='records')
-
-      print("Loading training vectorizer for consistent feature encoding...")
-      dv = joblib.load('vectorizer.pkl')
-      
-      # Applying the vectorizer:
-      X_encoded_val = dv.transform(X_dic)
-  
-      # Save X_encoded as numpy array
-      np.save('X_encoded_val.npy', X_encoded_val)
-
-      # Save y as numpy array  
-      np.save('target_val.npy', y.values)
-
-      # Also save feature names for reference
-      feature_names = dv.get_feature_names_out()
-      np.save('feature_names.npy', feature_names)
+    commands:
+      - python load_and_prepare_test_data.py
     outputFiles:
       - "target_val.npy"
       - "X_encoded_val.npy"
   
-  # Add this task to your existing workflow after load_and_prepare_test_data
   - id: analyze_data_drift
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
@@ -417,14 +134,12 @@ tasks:
       include:
         - drift_monitoring.py
     inputFiles:
-      # From base data preparation
       model_info.json: "{{ outputs.extract_production_model.outputFiles['model_info.json'] }}"
       model.pkl: "{{ outputs.extract_production_model.outputFiles['mydir/artifacts/model.pkl'] }}"
       vectorizer.pkl: "{{ outputs.extract_production_model.outputFiles['mydir/artifacts/vectorizer.pkl'] }}"
       X_encoded.npy: "{{ outputs.load_and_prepare_base_data.outputFiles['X_encoded.npy'] }}"
       y.npy: "{{ outputs.load_and_prepare_base_data.outputFiles['y.npy'] }}"
       feature_names.npy: "{{ outputs.load_and_prepare_base_data.outputFiles['feature_names.npy'] }}"
-      # From test data preparation
       target_val.npy: "{{ outputs.load_and_prepare_test_data.outputFiles['target_val.npy'] }}"
       X_encoded_val.npy: "{{ outputs.load_and_prepare_test_data.outputFiles['X_encoded_val.npy'] }}"
     beforeCommands:
@@ -449,17 +164,14 @@ tasks:
     inputFiles:
       drift_metadata.json: "{{ outputs.analyze_data_drift.outputFiles['drift_metadata.json'] }}"
     env:
-      # Email alerting configuration
-      SMTP_SERVER: "{{ kv('SMTP_SERVER') }}"           # e.g., smtp.gmail.com
-      SMTP_PORT: "{{ kv('SMTP_PORT') }}"               # e.g., 587 for TLS
-      SENDER_EMAIL: "{{ kv('SENDER_EMAIL') }}"         # Your email address
-      SENDER_PASSWORD: "{{ kv('SENDER_PASSWORD') }}"   # App password or email password
-      RECIPIENT_EMAILS: "{{ kv('RECIPIENT_EMAILS') }}" # Comma-separated: user1@email.com,user2@email.com
-      
-      # Custom alert thresholds (optional - defaults to 5%)
-      RMSE_DEGRADATION_THRESHOLD: "0.05"  # 5% increase triggers alert
-      R2_DEGRADATION_THRESHOLD: "0.05"    # 5% decrease triggers alert  
-      MAE_DEGRADATION_THRESHOLD: "0.05"   # 5% increase triggers alert
+      SMTP_SERVER: "{{ kv('SMTP_SERVER') }}"
+      SMTP_PORT: "{{ kv('SMTP_PORT') }}"
+      SENDER_EMAIL: "{{ kv('SENDER_EMAIL') }}"
+      SENDER_PASSWORD: "{{ kv('SENDER_PASSWORD') }}"
+      RECIPIENT_EMAILS: "{{ kv('RECIPIENT_EMAILS') }}"
+      RMSE_DEGRADATION_THRESHOLD: "0.05"
+      R2_DEGRADATION_THRESHOLD: "0.05"
+      MAE_DEGRADATION_THRESHOLD: "0.05"
     beforeCommands:
       - pip install pandas==2.3.1 numpy==2.2.6 scikit-learn==1.7.1
       - pip install evidently==0.7.9 requests
@@ -472,7 +184,6 @@ tasks:
       interval: PT30S
       maxAttempt: 3
 
-  # Conditional tasks based on alert status
   - id: handle_critical_alerts
     type: io.kestra.plugin.core.flow.If
     condition: "{{ read(outputs.compare_model_performance.outputFiles['performance_comparison.json']) | jq('.alerts.alert_count > 0') }}"
