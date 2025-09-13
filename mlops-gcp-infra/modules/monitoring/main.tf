@@ -34,6 +34,13 @@ resource "google_storage_bucket" "reports" {
   uniform_bucket_level_access = true
 }
 
+# Public read access to the reports bucket
+resource "google_storage_bucket_iam_member" "public_read" {
+  bucket = google_storage_bucket.reports.name
+  role   = "roles/storage.objectViewer"
+  member = "allUsers"
+}
+
 # Service account
 resource "google_service_account" "sa" {
   project      = var.project_id

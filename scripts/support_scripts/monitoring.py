@@ -161,6 +161,17 @@ def setup_regression_dashboard(project):
         ),
         tab="Model Performance",
     )
+
+    project.dashboard.add_panel(
+        DashboardPanelPlot(
+            title="RSME Score",
+            subtitle="Average difference between predicted values and actual values",
+            size="half",
+            values=[PanelMetric(legend="RMSE", metric="RMSE")],
+            plot_params={"plot_type": "line"},
+        ),
+        tab="Model Performance",
+    )
     
     project.save()
 

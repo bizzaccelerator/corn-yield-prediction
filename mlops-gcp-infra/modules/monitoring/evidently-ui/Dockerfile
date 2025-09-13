@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Evidently
-RUN pip install --no-cache-dir evidently
+RUN pip install --no-cache-dir evidently==0.7.12
 
 # Environment variables for Cloud Run
 ENV PORT=8080
