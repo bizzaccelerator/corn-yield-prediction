@@ -20,34 +20,55 @@ inputs:
       - ridge
       - lasso
       - gbr
+  - id: is_retraining
+    type: BOOLEAN
+    defaults: false
+  - id: file_name
+    type: STRING
+    required: true
+    defaults: 2024_01
+    description: "Name of CSV file you want to use for testing (eg: 2024_01, 2024_02, etc.)"
 
 variables:
   mlflow_tracking_uri: "https://mlflow-server-453290981886.us-central1.run.app"
   gcp_project: "corn-yield-prediction-kenia"
   experiment_name: "corn-yield-predictors"
   model_name: "corn-yield-predictor"
+  bucket_name: "corn-yield-testing-datasets"
+  base_path: "data_2024"
+  file_extension: ".csv"
 
 tasks:
-  - id: download_dataset
-    type: io.kestra.plugin.scripts.python.Script
-    description: Download corn farming dataset from Kaggle using authenticated API
-    taskRunner:
-      type: io.kestra.plugin.core.runner.Process
-    env:
-      KAGGLE_USERNAME: "{{ kv('KAGGLE_USERNAME') }}"
-      KAGGLE_KEY: "{{ kv('KAGGLE_KEY') }}"
-    beforeCommands:
-    - pip install kagglehub
-    - pip install kaggle 
-    outputFiles:
-      - "corn_data.csv"
-    script: |
-      import kaggle
-      kaggle.api.authenticate()
-      handle = "japondo/corn-farming-data"
-      print("Los archivos a descargar son: ", kaggle.api.dataset_list_files(handle).files)
-      kaggle.api.dataset_download_files(handle, path=".", unzip=True)
-
+  - id: choose_data_source
+    type: io.kestra.core.tasks.flows.Switch
+    value: "{{ inputs.is_retraining }}"
+    cases:
+      true:
+        - id: download_test_data_from_gcs
+          type: io.kestra.plugin.gcp.gcs.Download
+          from: "gs://{{ vars.bucket_name }}/{{ vars.base_path }}/corn_{{ inputs.file_name }}{{ vars.file_extension }}"
+          serviceAccount: "{{ kv('GCP_SERVICE_ACCOUNT_KEY') }}"
+          projectId: "{{ kv('GCP_PROJECT_ID') }}"
+      false:
+        - id: download_dataset
+          type: io.kestra.plugin.scripts.python.Script
+          taskRunner:
+            type: io.kestra.plugin.core.runner.Process
+          env:
+            KAGGLE_USERNAME: "{{ kv('KAGGLE_USERNAME') }}"
+            KAGGLE_KEY: "{{ kv('KAGGLE_KEY') }}"
+          beforeCommands:
+            - pip install kagglehub
+            - pip install kaggle 
+          outputFiles:
+            - "corn_data.csv"
+          script: |
+            import kaggle
+            kaggle.api.authenticate()
+            handle = "japondo/corn-farming-data"
+            print("Los archivos a descargar son: ", kaggle.api.dataset_list_files(handle).files)
+            kaggle.api.dataset_download_files(handle, path=".", unzip=True)
+  
   - id: clean_split
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
@@ -61,7 +82,12 @@ tasks:
     beforeCommands:
       - pip install pandas scikit-learn 
     inputFiles:
-      corn.csv: "{{ outputs.download_dataset.outputFiles['corn_data.csv'] }}"
+      corn.csv: >-
+        {{
+          inputs.is_retraining
+            ? outputs.download_test_data_from_gcs.uri
+            : outputs.download_dataset.outputFiles['corn_data.csv']
+        }}
     commands:
       - python clean.py
     outputFiles:
@@ -91,7 +117,7 @@ tasks:
     inputs:
       model_performance_threshold: "{{ inputs.model_performance_threshold }}"
       target_stage: "{{ inputs.target_stage }}"
-      force_deployment: "{{ inputs.force_deployment }}"
+      force_deployment: "{{ inputs.is_retraining ? true : inputs.force_deployment }}"
       vectorizer_file_path: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
       final_run_info_file_path: "{{ outputs.train_selected_model.outputs.final_run_info_file }}"
 
