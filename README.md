@@ -86,6 +86,18 @@ For artifact and report management, a dedicated structure in Google Cloud Storag
 ![Solution](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/Solution.JPG)
 Photo: Diagram of the prediction service disposed.
 
+### _Key Benefits:_ 
+
+- Accuracy: The optimized Gradient Boosted Tree model provides high predictive performance, explaining over 90% of corn yield variability.
+
+- Scalability: Cloud Run and Docker ensure seamless scaling with fluctuating demand, while Terraform provisions reproducible infrastructure.
+
+- Transparency & Monitoring: MLflow and Evidently guarantee experiment tracking, model comparisons, drift detection, and visibility into system behavior.
+
+- Automation & Reliability: Kestra orchestrates end-to-end workflows, reducing manual intervention and ensuring repeatable, reliable execution.
+
+- Governance & Maintenance: Dedicated GCS storage separates artifacts and reports, supporting strong governance and easier long-term management.
+
 ## How to run the project.
 
 Follow the steps in the [wiki](https://github.com/bizzaccelerator/corn-yield-prediction/wiki/Welcome-to-the-Corn-yield-prediction-service-in-Kenia-wiki!) to reproduce the project.
