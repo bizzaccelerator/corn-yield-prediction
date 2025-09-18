@@ -54,7 +54,7 @@ The underlying infrastructure and CI/CD pipelines were fully managed through Ter
 
 Finally, for storage and artifact management, I established a dedicated structure in Google Cloud Storage. MLflow artifacts—including models, metrics, and parameters—were stored separately from Evidently reports. This separation supported strong data governance practices, ensured traceability of all model versions and evaluations, and simplified long-term maintenance.
 
-![mlops_infra](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/mlops_infra.JPG)
+![mlops_infra](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/mlops_infra.jpg)
 Photo: Diagram of the technical infrastructure engineered.
 
 The proposed engineering solution is based on an `Optimized Gradient Boosted Tree model`, achieving an average deviation of 41.775 units from the test values and explaining 90.14% of the variability in corn yield production. This model outperformed other algorithms tested.
