@@ -67,21 +67,21 @@ In the model development phase, several algorithms were evaluated, including Lin
 
 The model was selected after an extensive Exploratory Data Analysis (EDA), which addressed missing values, analyzed univariate distributions, and assessed feature importance. Details of the EDA process are available in the [notebook](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/notebook.ipynb).
 
-Pipeline orchestration was automated using Kestra, deployed on a dedicated Google VM. Kestra ensured reproducibility by automating workflows for data preprocessing, model training, evaluation, deployment, and monitoring. This reduced manual intervention and allowed consistent execution across iterations.
-
-For monitoring and validation, Evidently AI was integrated to track model performance over time. Reports covered training and testing data, data drift detection, and data quality checks. The Evidently UI, deployed in Google Cloud Run, gave stakeholders visibility into model behavior and potential risks.
-
-Once the best model was finalized, it was containerized with Docker and pushed to Google Container Registry (GCR). Deployment to Google Cloud Run exposed a REST API endpoint, enabling secure and scalable access for the Mayor’s Office. This serverless design provided elasticity to adapt to fluctuating demand while keeping costs efficient.
-
-The entire infrastructure stack—including Cloud Run services, GCS buckets, and networking—was provisioned with Terraform, ensuring reproducibility and version control. To accelerate delivery, GitHub Actions pipelines automated building, testing, and deployment processes. Additionally, integration testing with Docker Compose validated interoperability between MLflow, Evidently, Kestra, and supporting services before deployment.
-
-For artifact and report management, a dedicated structure in Google Cloud Storage separated MLflow artifacts from Evidently reports. This setup ensured governance, traceability of models, and easier long-term maintenance.
-
 The prediction application was coded in python using a distribution of Anaconda. Conda was used to manage isolated virtual environments and install all the packages needed without conflicts. This solution was built using Flask, a lightweight and flexible Python web framework, to efficiently handle HTTP requests and deliver a user-friendly interface for interacting with the predictive model. Flask was chosen for its simplicity, scalability, and suitability for developing APIs that serve the predictive service.
 
 To ensure portability and consistent deployment across different environments, the application is containerized using Docker. This approach encapsulates the entire application through a [Dockerfile](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Dockerfile), including the Flask backend, the predictive model, and all dependencies, within a lightweight container. Docker allows the service to run seamlessly across various platforms, eliminating compatibility issues and simplifying deployment.
 
 Together, Flask and Docker provide a robust foundation for the application [predict.py](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/predict.py), enabling efficient development, deployment, and scalability while ensuring reliability and ease of maintenance. 
+
+Once the best model was finalized, it was containerized with Docker and pushed to Google Container Registry (GCR). Deployment to Google Cloud Run exposed a REST API endpoint, enabling secure and scalable access for the Mayor’s Office. This serverless design provided elasticity to adapt to fluctuating demand while keeping costs efficient.
+
+Pipeline orchestration was automated using Kestra, deployed on a dedicated Google VM. Kestra ensured reproducibility by automating workflows for data preprocessing, model training, evaluation, deployment, and monitoring. This reduced manual intervention and allowed consistent execution across iterations.
+
+For monitoring and validation, Evidently AI was integrated to track model performance over time. Reports covered training and testing data, data drift detection, and data quality checks. The Evidently UI, deployed in Google Cloud Run, gave stakeholders visibility into model behavior and potential risks.
+
+The entire infrastructure stack—including Cloud Run services, GCS buckets, and networking—was provisioned with Terraform, ensuring reproducibility and version control. To accelerate delivery, GitHub Actions pipelines automated building, testing, and deployment processes. Additionally, integration testing with Docker Compose validated interoperability between MLflow, Evidently, Kestra, and supporting services before deployment.
+
+For artifact and report management, a dedicated structure in Google Cloud Storage separated MLflow artifacts from Evidently reports. This setup ensured governance, traceability of models, and easier long-term maintenance.
 
 ![Solution](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/Solution.JPG)
 Photo: Diagram of the prediction service disposed.
