@@ -16,17 +16,46 @@ This could be understood in two leves: a business problem and a technical proble
 Certain region in Kenya has experienced rapid population growth over the past decade in an underdeveloped economic environment. The social group living in this region considers _corn_ as the preferred base for most typical dishes; however, the low level of precipitation threatens sufficient production in the coming years. The Mayor's Office seeks to make the best decisions to ensure food security in the county. To acheive that goal, the prediction of corn production at a household level is a must. That’s why the managing team at the political office needs to know the expected levels of corn production at a household level, the key variables affecting it, so they can further improve the resources allocation process.
 
 ### _Technical problem:_
-As a senior Machine Learning Engineer, I am responsible for developing a model that predicts the amount of corn likely to be produced in a county in Kenya. This model is designed to support the mayor’s office in planning and distributing resources more effectively, helping improve outcomes for local agriculture.
+The county in Kenya is facing a potential food security risk due to rapid population growth, underdeveloped economic conditions, and declining precipitation levels. Since corn is the staple food in this region, the Mayor’s Office requires a reliable and scalable system to predict household-level corn production and identify the key variables influencing yield. These insights are essential for making data-driven decisions about resource allocation and agricultural planning.
 
-To build the model, we use detailed data collected from various farms, including information such as the gender of the farm leader, household size, and fertilizer usage. These factors help us understand what influences corn yield.
+From a technical perspective, this requires the development of a machine learning framework that can:
 
-Throughout the development process, we document the different approaches tested, the data used, and how the model performed. This helps ensure transparency and makes it easier to improve the model over time. We also store and manage different versions of the data and models, so we can always go back and compare results.
+- Ingest and process heterogeneous farm-level data, including demographic, household, and agricultural practice variables.
 
-The final model is made available through a secure cloud platform, allowing decision-makers to access predictions and insights when needed. This setup supports both easy access and controlled permissions, ensuring the information is both useful and protected.
+- Handle limited or incomplete datasets by incorporating methods for data augmentation or synthetic data generation.
 
-We’ve also put tools in place to monitor how the model performs in the real world. If the conditions that affect corn production change—such as weather patterns or farming practices—the system will alert us so the model can be reviewed and updated. This ongoing process ensures that the predictions remain accurate and that the tool continues to support strong, evidence-based decisions.
+- Evaluate multiple modeling approaches to ensure accuracy, fairness, and robustness in yield predictions.
+
+- Support experiment tracking and version control to ensure transparency and reproducibility across model iterations.
+
+- Enable deployment to a secure, cloud-based environment, accessible to authorized stakeholders while maintaining data privacy.
+
+- Provide mechanisms for continuous monitoring, detecting model drift when environmental or farming conditions change.
+
+- Be scalable and cost-efficient, so it can adapt to different levels of demand and long-term operational needs.
+
+The core challenge is therefore to design and implement a machine learning system that balances predictive accuracy, operational reliability, and long-term adaptability, so that the Mayor’s Office can depend on it as a decision-support tool for addressing food security in the region.
 
 ## Solution proposed
+
+To provide the Mayor’s Office with reliable insights, I designed an end-to-end MLOps pipeline that ensures reproducibility, scalability, and monitoring across the full lifecycle of machine learning models.
+
+For the data foundation, I worked with historical datasets sourced from [Kaggle](https://www.kaggle.com/datasets/japondo/corn-farming-data/data). Since real-world data can sometimes be limited or incomplete, I also generated synthetic datasets specifically for testing purposes. This combination gave us the necessary volume and diversity of records to properly train, validate, and stress-test the models before pushing them into production.
+
+For model development and experimentation, I tested several algorithms including Linear Regression, Lasso, Ridge, and Gradient Boosted Trees (GBT). To systematically fine-tune performance, I applied the Hyperopt library for hyperparameter optimization. All experiments, metrics, and parameters were tracked with MLflow, which made it straightforward to compare results and select the most effective approach.
+
+To ensure smooth execution, I implemented pipeline orchestration and automation using Kestra, deployed on a dedicated Google VM. Kestra handled the automation of data preparation, model training, evaluation, deployment, and monitoring steps. By reducing manual intervention, it allowed workflows to be repeatable, reliable, and fully automated.
+
+For model monitoring and validation, I integrated Evidently AI. This tool continuously monitored both training (baseline) and testing datasets. It generated reports on model performance, data drift, and data quality, helping anticipate issues before they could affect predictions. Additionally, the Evidently UI was deployed in Cloud Run, giving decision-makers direct access to visual reports and enabling them to detect potential risks early.
+
+Once the best model was finalized, it was packaged as a Docker image and stored in Google Container Registry (GCR). From there, it was deployed into Google Cloud Run, which provided a REST API endpoint for external use by the Mayor’s Office or other systems. This design ensured the solution was scalable, serverless, and cost-efficient, adapting seamlessly to fluctuating demand.
+
+The underlying infrastructure and CI/CD pipelines were fully managed through Terraform, which guaranteed reproducibility, consistency, and version control. To streamline deployments, I set up GitHub Actions, which automated testing, building, and rollout. Furthermore, integration testing with Docker Compose validated that services such as MLflow, Evidently, the database, and the orchestrator worked together correctly before any updates were released to Google Cloud.
+
+Finally, for storage and artifact management, I established a dedicated structure in Google Cloud Storage. MLflow artifacts—including models, metrics, and parameters—were stored separately from Evidently reports. This separation supported strong data governance practices, ensured traceability of all model versions and evaluations, and simplified long-term maintenance.
+
+![mlops_infra](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/mlops_infra.JPG)
+Photo: Diagram of the technical infrastructure engineered.
 
 The proposed engineering solution is based on an `Optimized Gradient Boosted Tree model`, achieving an average deviation of 41.775 units from the test values and explaining 90.14% of the variability in corn yield production. This model outperformed other algorithms tested.
 
@@ -35,7 +64,7 @@ The model was selected after an extensive Exploratory Data Analysis (EDA), which
 The solution is implemented as a Python-based predictive service designed to estimate corn yields using survey data from farmers. It is deployed as a web application, enabling office teams to process survey data and predict expected corn yields for the current season, so they can take actions to reduce food insecurity in the county.
 
 ![Solution](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/Solution.JPG)
-Photo: Diagram of the solution engineered.
+Photo: Diagram of the prediction service disposed.
 
 ### _Rationale behind the solution:_ 
 
