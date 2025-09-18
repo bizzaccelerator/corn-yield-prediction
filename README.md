@@ -21,17 +21,11 @@ The county in Kenya is facing a potential food security risk due to rapid popula
 From a technical perspective, this requires the development of a machine learning framework that can:
 
 - Ingest and process heterogeneous farm-level data, including demographic, household, and agricultural practice variables.
-
 - Handle limited or incomplete datasets by incorporating methods for data augmentation or synthetic data generation.
-
 - Evaluate multiple modeling approaches to ensure accuracy, fairness, and robustness in yield predictions.
-
 - Support experiment tracking and version control to ensure transparency and reproducibility across model iterations.
-
 - Enable deployment to a secure, cloud-based environment, accessible to authorized stakeholders while maintaining data privacy.
-
 - Provide mechanisms for continuous monitoring, detecting model drift when environmental or farming conditions change.
-
 - Be scalable and cost-efficient, so it can adapt to different levels of demand and long-term operational needs.
 
 The core challenge is therefore to design and implement a machine learning system that balances predictive accuracy, operational reliability, and long-term adaptability, so that the Mayor’s Office can depend on it as a decision-support tool for addressing food security in the region.
@@ -89,13 +83,9 @@ Photo: Diagram of the prediction service disposed.
 ### _Key Benefits:_ 
 
 - Accuracy: The optimized Gradient Boosted Tree model provides high predictive performance, explaining over 90% of corn yield variability.
-
 - Scalability: Cloud Run and Docker ensure seamless scaling with fluctuating demand, while Terraform provisions reproducible infrastructure.
-
 - Transparency & Monitoring: MLflow and Evidently guarantee experiment tracking, model comparisons, drift detection, and visibility into system behavior.
-
 - Automation & Reliability: Kestra orchestrates end-to-end workflows, reducing manual intervention and ensuring repeatable, reliable execution.
-
 - Governance & Maintenance: Dedicated GCS storage separates artifacts and reports, supporting strong governance and easier long-term management.
 
 ## How to run the project.
