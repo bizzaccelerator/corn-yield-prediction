@@ -90,4 +90,4 @@ Photo: Diagram of the prediction service disposed.
 
 ## How to run the project.
 
-Follow the steps in the [wiki](https://github.com/bizzaccelerator/corn-yield-prediction/wiki/Welcome-to-the-Corn-yield-prediction-service-in-Kenia-wiki!) to reproduce the project.
+Check out the project [wiki](https://github.com/bizzaccelerator/corn-yield-prediction/wiki/Welcome-to-the-Corn-yield-prediction-service-in-Kenia-wiki!) for more details about this repository and step-by-step instructions to reproduce the solution.
