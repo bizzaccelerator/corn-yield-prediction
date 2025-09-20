@@ -94,6 +94,10 @@ Check out the project [wiki](https://github.com/bizzaccelerator/corn-yield-predi
 
 ## License
 
-This project is no longer licensed under MIT.  
-As of September 20, 2025, all rights are reserved.  
-Previous versions remain available under the MIT License.
+This project is no longer open source. It's no longer licensed under MIT.  
+
+As of September 19, 2025, all rights are reserved.
+
+- You may not copy, modify, or distribute this code without explicit permission.  
+- Past versions released under the MIT License remain available under that license.  
+- Future versions (commits after this date) are proprietary.  
