@@ -91,3 +91,9 @@ Photo: Diagram of the prediction service disposed.
 ## How to run the project.
 
 Check out the project [wiki](https://github.com/bizzaccelerator/corn-yield-prediction/wiki/Welcome-to-the-Corn-yield-prediction-service-in-Kenia-wiki!) for more details about this repository and step-by-step instructions to reproduce the solution.
+
+## License
+
+This project is no longer licensed under MIT.  
+As of September 20, 2025, all rights are reserved.  
+Previous versions remain available under the MIT License.
