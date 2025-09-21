@@ -89,8 +89,6 @@ resource "null_resource" "mlflow_image_build" {
     entrypoint_hash    = filemd5("${path.module}/mlflow-server/entrypoint.sh")
     requirements_hash  = filemd5("${path.module}/mlflow-server/requirements.txt")
     cloudbuild_hash    = filemd5("${path.module}/mlflow-server/cloudbuild.yml")
-    # Para forzar manualmente un rebuild, puedes descomentar esto:
-    # force_rebuild = timestamp()
   }
 
   provisioner "local-exec" {

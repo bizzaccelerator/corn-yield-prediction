@@ -31,3 +31,9 @@ output "evidently_ui_url" {
 output "evidently_ui_bucket" {
   value = module.monitoring.evidently_bucket
 }
+
+# MLFLOW
+output "mlflow_url" {
+  description = "URL to access MLflow UI"
+  value       = module.mlflow.mlflow_url
+}
