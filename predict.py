@@ -1,10 +1,7 @@
 import json
 import logging
-import os
 import pickle
 
-import numpy as np
-import pandas as pd
 from flask import Flask, jsonify, request
 
 # The model used is refered

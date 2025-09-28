@@ -135,7 +135,8 @@ def get_report_list_from_evidently(project_id: str) -> List[str]:
 
 def fetch_report_from_gcs(project_id: str, report_id: str) -> Optional[Dict]:
     """Download JSON snapshot from public GCS URL (or authenticated if bucket is private)."""
-    gcs_url = f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/{project_id}/snapshots/{report_id}.json"
+    gcs_url = f"https://storage.googleapis.com/{
+        GCS_BUCKET_NAME}/{project_id}/snapshots/{report_id}.json"
     try:
         resp = requests.get(gcs_url, timeout=30)
         if resp.status_code == 200:
@@ -298,8 +299,12 @@ def extract_performance_metrics(report_data: Dict) -> Dict[str, Any]:
 
     # Debug summary
     print(
-        f"  Extracted for report {results.get('report_id')}: rmse={results.get('rmse')}, r2={results.get('r2')}, mae={results.get('mae')}, drift={results.get('drift_detected')}"
-    )
+        f"  Extracted for report {
+            results.get('report_id')}: rmse={
+            results.get('rmse')}, r2={
+                results.get('r2')}, mae={
+                    results.get('mae')}, drift={
+                        results.get('drift_detected')}")
     return results
 
 
@@ -381,7 +386,9 @@ def send_email_alert(message: str, subject: str) -> bool:
               <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{message}</pre>
             </div>
             <hr>
-            <p><strong>Dashboard:</strong> <a href="{EVIDENTLY_SERVICE_URL}" target="_blank">{EVIDENTLY_SERVICE_URL}</a></p>
+            <p><strong>Dashboard:</strong> <a href="{EVIDENTLY_SERVICE_URL}
+            " target="_blank">{
+            EVIDENTLY_SERVICE_URL}</a></p>
             <p><strong>Timestamp:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}</p>
             <p style="color: #666; font-size: 12px;">This is an automated alert from the ML monitoring system.</p>
           </body>
@@ -532,9 +539,8 @@ def main():
         return
 
     project_id = str(project.id)
-    print(
-        f"[info] Using project ID: {project_id}  (Evidently URL: {EVIDENTLY_SERVICE_URL}/projects/{project_id})"
-    )
+    print(f"[info] Using project ID: {project_id}  (Evidently URL: {
+        EVIDENTLY_SERVICE_URL}/projects/{project_id})")
 
     report_ids = get_report_list_from_evidently(project_id)
     if not report_ids:
@@ -571,11 +577,13 @@ def main():
     print("Selected baseline (oldest) and current (newest) reports")
     print("=" * 40)
     print(
-        f"Baseline report: {baseline.get('report_id')}  timestamp: {baseline.get('timestamp')}"
-    )
+        f"Baseline report: {
+            baseline.get('report_id')}  timestamp: {
+            baseline.get('timestamp')}")
     print(
-        f"Current  report: {current.get('report_id')}  timestamp: {current.get('timestamp')}"
-    )
+        f"Current  report: {
+            current.get('report_id')}  timestamp: {
+            current.get('timestamp')}")
 
     # Compare metrics
     print("\nPERFORMANCE COMPARISON:")
@@ -662,8 +670,9 @@ def main():
     print(f"\n[info] Results saved to performance_comparison.json")
     if alert_messages:
         print(
-            f"[info] {len(alert_messages)} alert(s) generated and sent to: {', '.join(alerts_sent)}"
-        )
+            f"[info] {
+                len(alert_messages)} alert(s) generated and sent to: {
+                ', '.join(alerts_sent)}")
 
     print("\n" + "=" * 60)
     print(f"Evidently dashboard: {EVIDENTLY_SERVICE_URL}/projects/{project.id}")

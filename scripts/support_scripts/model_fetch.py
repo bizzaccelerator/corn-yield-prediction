@@ -1,12 +1,9 @@
 import json
 import os
-import pickle
 
 import mlflow
 import numpy as np
-import pandas as pd
 from mlflow.tracking import MlflowClient
-from sklearn.metrics import mean_squared_error, r2_score
 
 # --- Setup ---
 mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
@@ -79,16 +76,18 @@ else:
         should_deploy = True
     else:
         improvement = (production_rmse - candidate_rmse) / production_rmse
-        print(f"RMSE improvement over production: {improvement*100:.2f}%")
+        print(f"RMSE improvement over production: {improvement * 100:.2f}%")
         if improvement > comparison_threshold:
             should_deploy = True
             print(
-                f"Candidate model shows {improvement*100:.2f}% improvement (threshold: {comparison_threshold*100:.2f}%)"
-            )
+                f"Candidate model shows {
+                    improvement *
+                    100:.2f}% improvement (threshold: {
+                    comparison_threshold *
+                    100:.2f}%)")
         else:
-            print(
-                f"Candidate model improvement {improvement*100:.2f}% is below threshold {comparison_threshold*100:.2f}%"
-            )
+            print(f"Candidate model improvement {
+                improvement * 100:.2f}% is below threshold {comparison_threshold * 100:.2f}%")
 
 # --- Output decision ---
 decision = {

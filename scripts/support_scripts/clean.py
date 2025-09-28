@@ -10,19 +10,21 @@ from sklearn.model_selection import train_test_split
 corn = pd.read_csv("corn.csv", sep=",")
 
 
-## Step 1: Understanding the data
+# Step 1: Understanding the data
 print("The dataset size is: ", corn.shape)
 
 print("The columns in the dataset size are: ", corn.columns)
 
-# Using the info() method, we can quickly identify the data type of each column and detect null values:"
+# Using the info() method, we can quickly identify the data type of each
+# column and detect null values:"
 corn.info()
 
 print("The number of null values in the dataset is confirmed as: ", corn.isna().sum())
 
 
-## Step 2: Data preparation
-# Now that I have a general understanding of the data, some cleaning is needed before proceeding with further analysis.
+# Step 2: Data preparation
+# Now that I have a general understanding of the data, some cleaning is
+# needed before proceeding with further analysis.
 
 
 # Then, our subset selected for analysis is:
@@ -45,7 +47,8 @@ corn_subset = corn[
     ]
 ]
 
-# Column names in our refined dataframe are converted to lowercase, and spaces are removed for consistency and usability:
+# Column names in our refined dataframe are converted to lowercase, and
+# spaces are removed for consistency and usability:
 corn_subset.columns = [name.lower() for name in corn_subset.columns]
 corn_subset.columns = [name.replace(" ", "_") for name in corn_subset.columns]
 
@@ -53,10 +56,12 @@ corn_subset.columns = [name.replace(" ", "_") for name in corn_subset.columns]
 # Those registries represent:
 missing_land = corn_subset["acreage"].isna().sum()
 amount_ml = (missing_land / corn.shape[0]) * 100
-print(
-    f"The percentage of registries with missing values of cultivated land represent {amount_ml}"
-)
-# While removing a large number of missing values is generally not advisable, the lack of access to the research team for clarification and the limited usefulness of this data for our model, these rows will be removed from the dataframe.
+print(f"The percentage of registries with missing values of cultivated land represent {
+    amount_ml}")
+# While removing a large number of missing values is generally not
+# advisable, the lack of access to the research team for clarification and
+# the limited usefulness of this data for our model, these rows will be
+# removed from the dataframe.
 
 # The resulting dataframe is:
 filter = corn_subset["acreage"].isna()
@@ -74,7 +79,7 @@ print(
 )
 
 
-## Step 3: Feature understanding
+# Step 3: Feature understanding
 
 # Now, it is important to understand how the selected variables behave:
 print("The target variable is Yield")
@@ -149,8 +154,10 @@ X_train, X_val, y_train, y_val = train_test_split(
 
 # The lenght of the datasets can be validated as:
 print(
-    f"The number of registries in the train dataset is {len(X_train)}, in the validation dataset is {len(X_val)}, and in the test dataset is {len(X_test)}."
-)
+    f"The number of registries in the train dataset is {
+        len(X_train)}, in the validation dataset is {
+            len(X_val)}, and in the test dataset is {
+                len(X_test)}.")
 
 # Create output directory
 os.makedirs("data_splits", exist_ok=True)

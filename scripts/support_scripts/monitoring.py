@@ -9,7 +9,6 @@ import pandas as pd
 import requests
 from evidently import DataDefinition, Dataset, Regression, Report
 from evidently.metrics import *
-from evidently.presets import RegressionPreset
 from evidently.sdk.models import PanelMetric
 from evidently.sdk.panels import DashboardPanelPlot
 from evidently.ui.workspace import RemoteWorkspace, Workspace
@@ -205,7 +204,8 @@ try:
         ws, project_name, project_description
     )
 
-    # Check if project already has reports (skip if reports exist, unless forced or new project)
+    # Check if project already has reports (skip if reports exist, unless
+    # forced or new project)
     if not is_new_project and not FORCE_REPORT_GENERATION:
         has_reports, report_count = check_project_has_reports(ws, project.id)
 

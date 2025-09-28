@@ -5,14 +5,12 @@ from datetime import datetime
 import joblib
 import numpy as np
 import pandas as pd
-import requests
 from evidently import DataDefinition, Dataset, Regression, Report
 from evidently.metrics import *
-from evidently.presets import DataDriftPreset, DataSummaryPreset, RegressionPreset
+from evidently.presets import DataDriftPreset, DataSummaryPreset
 from evidently.sdk.models import PanelMetric
 from evidently.sdk.panels import DashboardPanelPlot
 from evidently.ui.workspace import RemoteWorkspace
-from sklearn.model_selection import train_test_split
 
 # Configuration for remote Evidently service
 EVIDENTLY_SERVICE_URL = "https://evidently-ui-453290981886.us-central1.run.app"
@@ -83,7 +81,7 @@ def setup_drift_dashboard(project):
     )
 
 
-### LOAD THE DATA
+# LOAD THE DATA
 validation_files_exist = os.path.exists("X_encoded_val.npy")
 
 if not validation_files_exist:
@@ -148,12 +146,12 @@ with open("model_info.json", "r") as f:
 
 model = joblib.load("model.pkl")
 
-### CREATE PREDICTIONS FOR BOTH DATASETS
+# CREATE PREDICTIONS FOR BOTH DATASETS
 print("Creating predictions...")
 train_predictions = model.predict(X_encoded_train.values)
 val_predictions = model.predict(X_encoded_val.values)
 
-### CREATE THE DATASETS FOR DRIFT ANALYSIS
+# CREATE THE DATASETS FOR DRIFT ANALYSIS
 print("Preparing datasets for drift analysis...")
 
 # Reference data (training)
@@ -183,7 +181,7 @@ schema = DataDefinition(
 eval_data_reference = Dataset.from_pandas(reference_data, data_definition=schema)
 eval_data_current = Dataset.from_pandas(current_data, data_definition=schema)
 
-### CREATE REMOTE WORKSPACE AND PROJECT
+# CREATE REMOTE WORKSPACE AND PROJECT
 try:
     ws = RemoteWorkspace(EVIDENTLY_SERVICE_URL)
 

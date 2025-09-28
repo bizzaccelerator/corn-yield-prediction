@@ -3,7 +3,6 @@ import os
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.feature_extraction import DictVectorizer
 
 
 def load_and_prepare_test_data():
@@ -125,8 +124,9 @@ def load_and_prepare_test_data():
             training_features = np.load("feature_names.npy")
             if len(training_features) != len(feature_names):
                 print(
-                    f"WARNING: Feature count mismatch! Training: {len(training_features)}, Test: {len(feature_names)}"
-                )
+                    f"WARNING: Feature count mismatch! Training: {
+                        len(training_features)}, Test: {
+                        len(feature_names)}")
             else:
                 print("✓ Feature count matches training data")
         except Exception as e:

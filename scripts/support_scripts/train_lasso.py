@@ -19,7 +19,7 @@ t_model = os.getenv("MODEL_TYPE")
 with open("dict_vectorizer", "rb") as f_in:
     dv = pickle.load(f_in)
 
-### Step 4: Model identification ### - Let's try some models:
+# Step 4: Model identification ### - Let's try some models:
 
 # Setup MLflow tracking URI
 mlflow_uri = os.getenv("MLFLOW_TRACKING_URI", "MLFLOW_TRACKING_URI")

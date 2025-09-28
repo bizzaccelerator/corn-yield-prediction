@@ -157,7 +157,7 @@ try:
 
                         print(f"📈 Production RMSE: {prod_rmse:.4f}")
                         print(f"📈 New model RMSE: {val_rmse:.4f}")
-                        print(f"📊 Improvement: {improvement*100:.2f}%")
+                        print(f"📊 Improvement: {improvement * 100:.2f}%")
 
                         # Only promote if improvement is significant (>5%)
                         min_improvement = 0.05
@@ -165,12 +165,18 @@ try:
 
                         if should_promote_to_prod:
                             print(
-                                f"✅ Improvement {improvement*100:.2f}% > {min_improvement*100:.2f}% threshold"
-                            )
+                                f"✅ Improvement {
+                                    improvement *
+                                    100:.2f}% > {
+                                    min_improvement *
+                                    100:.2f}% threshold")
                         else:
                             print(
-                                f"❌ Improvement {improvement*100:.2f}% < {min_improvement*100:.2f}% threshold"
-                            )
+                                f"❌ Improvement {
+                                    improvement *
+                                    100:.2f}% < {
+                                    min_improvement *
+                                    100:.2f}% threshold")
                     else:
                         print(
                             "⚠️  No validation_rmse tag found in production model - promoting anyway"
@@ -210,17 +216,14 @@ try:
                 except Exception as e:
                     print(f"⚠️  Warning: Could not add production promotion tags: {e}")
 
-                print(
-                    f"✅ Model version {version_number} successfully promoted to Production!"
-                )
+                print(f"✅ Model version {
+                    version_number} successfully promoted to Production!")
             else:
-                print(
-                    f"🎯 Model version {version_number} kept in Staging - insufficient improvement for Production"
-                )
+                print(f"🎯 Model version {
+                    version_number} kept in Staging - insufficient improvement for Production")
         else:
-            print(
-                f"🎯 Model version {version_number} promoted to Staging (other models also in staging)"
-            )
+            print(f"🎯 Model version {
+                version_number} promoted to Staging (other models also in staging)")
 
     else:
         print("❌ Model does not meet quality criteria")

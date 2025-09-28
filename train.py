@@ -7,7 +7,6 @@ import pickle
 # To check the time between steps:
 import time
 
-import numpy as np
 
 # The first step involves importing the libraries required for the process:
 import pandas as pd

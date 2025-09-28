@@ -1,6 +1,5 @@
 import json
 import os
-import pickle
 import shutil
 
 import joblib
@@ -70,9 +69,8 @@ def extract_production_model():
         if os.path.exists(vectorizer_source):
             shutil.copy2(vectorizer_source, vectorizer_output_path)
             vectorizer_found = True
-            print(
-                f"Vectorizer copied from {vectorizer_source} to {vectorizer_output_path}"
-            )
+            print(f"Vectorizer copied from {
+                vectorizer_source} to {vectorizer_output_path}")
         else:
             print(f"Vectorizer not found at {vectorizer_source}")
             # List what's actually in the model directory

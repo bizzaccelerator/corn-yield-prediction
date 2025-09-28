@@ -16,7 +16,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-########## THE FIRST PART IS LOADING THE DATA AND CONFIG
+# THE FIRST PART IS LOADING THE DATA AND CONFIG
 
 # Import the required information:
 model_selection = os.getenv("MODEL_TYPE")
@@ -71,7 +71,7 @@ mlflow.set_tracking_uri(mlflow_uri)
 print(f"MLflow Tracking URI: {mlflow_uri}")
 
 
-###### THE EVALUATION FUCNTIONS USED ARE:
+# THE EVALUATION FUCNTIONS USED ARE:
 
 
 # The evaluation of metrics for the model will be done using this formula:
@@ -126,7 +126,7 @@ def objective_gbr(params):
     return {"loss": -np.mean(neg_mse), "status": STATUS_OK}
 
 
-############ Evaluation and optimization of best models
+# Evaluation and optimization of best models
 
 if model_selection == "linear":
     print(
@@ -455,11 +455,11 @@ elif model_selection == "gbr":
             f"Optimization completed. Best learning_rate: {best_gbr['learning_rate']}"
         )
         print(
-            f"Optimization completed. Best min_samples_split: {best_gbr['min_samples_split']}"
-        )
+            f"Optimization completed. Best min_samples_split: {
+                best_gbr['min_samples_split']}")
         print(
-            f"Optimization completed. Best min_samples_leaf: {best_gbr['min_samples_leaf']}"
-        )
+            f"Optimization completed. Best min_samples_leaf: {
+                best_gbr['min_samples_leaf']}")
 
         # Log the best parameters found
         mlflow.log_param("best_n_estimators", best_gbr["n_estimators"])
