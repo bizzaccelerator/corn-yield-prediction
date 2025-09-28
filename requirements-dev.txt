@@ -1,0 +1,27 @@
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-xdist>=3.0.0
+pytest-mock>=3.10.0
+
+# Code quality
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+mypy>=1.0.0
+bandit>=1.7.0
+safety>=2.3.0
+pre-commit>=3.0.0
+
+# Documentation
+sphinx>=6.0.0
+sphinx-rtd-theme>=1.2.0
+
+# Jupyter
+jupyter>=1.0.0
+nbconvert>=7.0.0
+nbformat>=5.7.0
+
+# Additional ML testing tools
+great-expectations>=0.17.0
+deepdiff>=6.0.0  # For comparing ML model outputs
