@@ -59,7 +59,7 @@ tasks:
             KAGGLE_KEY: "{{ kv('KAGGLE_KEY') }}"
           beforeCommands:
             - pip install kagglehub
-            - pip install kaggle 
+            - pip install kaggle
           outputFiles:
             - "corn_data.csv"
           script: |
@@ -68,7 +68,7 @@ tasks:
             handle = "japondo/corn-farming-data"
             print("Los archivos a descargar son: ", kaggle.api.dataset_list_files(handle).files)
             kaggle.api.dataset_download_files(handle, path=".", unzip=True)
-  
+
   - id: clean_split
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
@@ -80,7 +80,7 @@ tasks:
       include:
         - clean.py
     beforeCommands:
-      - pip install pandas scikit-learn 
+      - pip install pandas scikit-learn
     inputFiles:
       corn.csv: >-
         {{
@@ -125,15 +125,15 @@ outputs:
   - id: selected_model_type
     type: STRING
     value: "{{ inputs.model_selection }}"
-  
+
   - id: training_result
     type: JSON
     value: "{{ outputs.train_selected_model.outputs }}"
-  
+
   - id: deployment_status
     type: JSON
     value: "{{ outputs.deploy_selected_model.outputs.deployment_result }}"
-  
+
   - id: build_info
     type: STRING
     value: "{{ outputs.deploy_selected_model.outputs.build_info ?? outputs.deploy_selected_model.outputs.skip_message }}"

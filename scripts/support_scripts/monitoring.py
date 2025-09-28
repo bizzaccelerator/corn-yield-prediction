@@ -1,19 +1,18 @@
-from datetime import datetime
-import os
 import glob
-import pandas as pd
 import json
-import numpy as np
-import joblib
-import requests
+import os
+from datetime import datetime
 
-from evidently import Report, Dataset, DataDefinition, Regression
-from evidently.ui.workspace import RemoteWorkspace, Workspace
-from evidently.sdk.models import PanelMetric
-from evidently.sdk.panels import DashboardPanelPlot
+import joblib
+import numpy as np
+import pandas as pd
+import requests
+from evidently import DataDefinition, Dataset, Regression, Report
 from evidently.metrics import *
 from evidently.presets import RegressionPreset
-
+from evidently.sdk.models import PanelMetric
+from evidently.sdk.panels import DashboardPanelPlot
+from evidently.ui.workspace import RemoteWorkspace, Workspace
 
 # Configuration for remote Evidently service
 EVIDENTLY_SERVICE_URL = "https://evidently-ui-453290981886.us-central1.run.app"

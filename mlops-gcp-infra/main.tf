@@ -33,7 +33,7 @@ module "mlflow" {
   github_owner        = var.github_owner
   github_repo         = var.github_repo
   mlflow_service_name = var.mlflow_service_name
-  allow_public_access = var.allow_public_access 
+  allow_public_access = var.allow_public_access
 }
 
 module "kestra" {

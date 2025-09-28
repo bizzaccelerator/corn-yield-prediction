@@ -1,18 +1,18 @@
 # The first step involves importing the libraries required for the process:
-import pandas as pd
-import numpy as np
-import mlflow
-import mlflow.sklearn
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+import json
 import os
 import pickle
-import json
+
+import mlflow
+import mlflow.sklearn
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import Lasso
 
 # Model packages used
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.linear_model import Lasso
-
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 t_model = os.getenv("MODEL_TYPE")
 # Extracting the vectorizer
@@ -62,7 +62,6 @@ mlflow.sklearn.autolog(log_input_examples=False, log_model_signatures=False)
 
 # Start an MLflow run
 with mlflow.start_run(run_name="Lasso-regression-corn-yield"):
-
     # Log dataset information
     mlflow.log_param("n_features", X_train.shape[1])
     mlflow.log_param("n_train_samples", X_train.shape[0])

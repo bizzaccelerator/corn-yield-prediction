@@ -77,7 +77,7 @@ tasks:
           - python model_registry.py
         outputFiles:
           - "*.json"
-      
+
       - id: extract_model_and_vectorizer
         type: io.kestra.plugin.scripts.python.Script
         containerImage: ghcr.io/kestra-io/pydata:latest
@@ -90,7 +90,7 @@ tasks:
           import os
           import json
           import mlflow
-          import mlflow.sklearn  
+          import mlflow.sklearn
           from mlflow.artifacts import download_artifacts
           import joblib
           import shutil
@@ -109,7 +109,7 @@ tasks:
           # Setup MLflow
           mlflow.set_tracking_uri(metadata['mlflow_tracking_uri'])
           run_id = metadata['mlflow_run_id']
-          
+
           print(f"MLflow URI: {metadata['mlflow_tracking_uri']}")
           print(f"Run ID: {run_id}")
 
@@ -118,14 +118,14 @@ tasks:
               print("Downloading model directory...")
               model_dir_path = f"runs:/{run_id}/model"
               local_model_dir = download_artifacts(model_dir_path)
-              
+
               print(f"Downloaded model directory to: {local_model_dir}")
               print(f"Model directory contents: {os.listdir(local_model_dir)}")
 
               # Load MLflow model and save as simple pickle
               print("Loading and converting MLflow model...")
               model = mlflow.sklearn.load_model(model_dir_path)
-              
+
               model_output_path = 'mydir/artifacts/model.pkl'
               joblib.dump(model, model_output_path)
               print(f"Model saved to: {model_output_path}")
@@ -133,14 +133,14 @@ tasks:
               # Find and copy vectorizer
               vectorizer_source = os.path.join(local_model_dir, 'vectorizer.pkl')
               vectorizer_output_path = 'mydir/artifacts/vectorizer.pkl'
-              
+
               if os.path.exists(vectorizer_source):
                   shutil.copy2(vectorizer_source, vectorizer_output_path)
                   print(f"Vectorizer copied to: {vectorizer_output_path}")
               else:
                   print(f"Vectorizer not found at expected location: {vectorizer_source}")
                   print("Searching for vectorizer in subdirectories...")
-                  
+
                   found = False
                   for root, dirs, files in os.walk(local_model_dir):
                       if 'vectorizer.pkl' in files:
@@ -149,7 +149,7 @@ tasks:
                           print(f"Found and copied vectorizer from: {source}")
                           found = True
                           break
-                  
+
                   if not found:
                       raise FileNotFoundError(f"vectorizer.pkl not found in {local_model_dir}")
 
@@ -169,7 +169,7 @@ tasks:
               import traceback
               traceback.print_exc()
               raise e
-        
+
         outputFiles:
           - "mydir/**"
 
@@ -185,7 +185,7 @@ tasks:
         - |
           # Create app directory
           mkdir -p app
-          
+
           # Create requirements.txt
           cat > app/requirements.txt << EOF
           flask==2.3.3
@@ -221,11 +221,11 @@ tasks:
           # Load model and vectorizer from local files
           try:
               logger.info("Loading model and vectorizer from local files...")
-              
+
               # Load the model
               model = joblib.load('model.pkl')
               logger.info("Model loaded successfully")
-              
+
               # Load the vectorizer
               vectorizer = joblib.load('vectorizer.pkl')
               logger.info("Vectorizer loaded successfully")
@@ -293,31 +293,31 @@ tasks:
           FROM python:3.11-slim
 
           WORKDIR /app
-          
+
           # Copy requirements and install dependencies
           COPY app/requirements.txt .
           RUN pip install --no-cache-dir -r requirements.txt
-          
+
           # Copy application files
           COPY app/ .
-          
+
           # Expose the application port
           EXPOSE 9696
 
           # Set the default command to run the application
           CMD ["waitress-serve", "--listen=0.0.0.0:9696", "main:app"]
           EOF
-          
+
           # Archive the app folder
           tar -czf app.tar.gz app/
 
           echo "Docker files created successfully"
-        
+
         outputFiles:
           - "Dockerfile"
           - "app/**"
           - "app.tar.gz"
-        
+
       - id: build_and_push_to_gcr
         type: io.kestra.plugin.scripts.shell.Commands
         description: Build Docker image using cloudbuild.yaml
@@ -335,75 +335,75 @@ tasks:
         commands:
           - |
               set -e
-              
+
               echo "=== Building with cloudbuild.yaml method ==="
-              
+
               echo "1. Setup..."
               gcloud auth activate-service-account --key-file=service_account_key.json
               gcloud config set project $PROJECT_ID
               apk add --no-cache jq
               tar -xzf app_archive
-              
+
               MODEL_VERSION=$(jq -r '.model_version // "1"' model_metadata.json)
               TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-              
+
               echo "Project: $PROJECT_ID"
-              echo "Service: $SERVICE_NAME"  
+              echo "Service: $SERVICE_NAME"
               echo "Version: $MODEL_VERSION"
               echo "Timestamp: $TIMESTAMP"
-              
+
               echo "2. Creating cloudbuild.yaml..."
               cat > cloudbuild.yaml << EOF
               steps:
               # Build the Docker image
               - name: 'gcr.io/cloud-builders/docker'
-                args: 
+                args:
                   - 'build'
                   - '-t'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
                   - '.'
-              
+
               # Tag with version
               - name: 'gcr.io/cloud-builders/docker'
-                args: 
+                args:
                   - 'tag'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION'
-              
-              # Tag with timestamp  
+
+              # Tag with timestamp
               - name: 'gcr.io/cloud-builders/docker'
                 args:
-                  - 'tag' 
+                  - 'tag'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
-              
+
               # Push all images
               images:
               - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
-              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION' 
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION'
               - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
-              
+
               timeout: '1200s'
-              
+
               options:
                 # Disable log streaming to avoid permission issues
                 logging: CLOUD_LOGGING_ONLY
               EOF
-              
+
               echo "3. Starting build with config file..."
               BUILD_ID=$(gcloud builds submit \
                 --config=cloudbuild.yaml \
                 --project=$PROJECT_ID \
                 --async \
                 --format="value(name)" | sed 's|.*/||')
-              
+
               echo "Build ID: $BUILD_ID"
-              
+
               echo "4. Monitoring build..."
               while true; do
                   STATUS=$(gcloud builds describe $BUILD_ID --project=$PROJECT_ID --format="value(status)")
                   echo "Build status: $STATUS"
-                  
+
                   case $STATUS in
                       "SUCCESS")
                           echo "Build successful!"
@@ -418,12 +418,12 @@ tasks:
                           ;;
                   esac
               done
-              
+
               echo "5. Creating output..."
               cat > build_info.json << EOF
               {
                 "build_status": "SUCCESS",
-                "build_id": "$BUILD_ID", 
+                "build_id": "$BUILD_ID",
                 "project_id": "$PROJECT_ID",
                 "service_name": "$SERVICE_NAME",
                 "model_version": "$MODEL_VERSION",
@@ -436,19 +436,19 @@ tasks:
                 "console_url": "https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
               }
               EOF
-              
+
               echo "Process completed!"
               cat build_info.json
-              
+
         outputFiles:
           - "build_info.json"
           - "cloudbuild.yaml"
-      
+
     else:
       - id: skip_deployment
         type: io.kestra.plugin.core.log.Log
         message: "Deployment skipped - candidate model not better than production or force_deployment is false"
-      
+
       - id: skip_output
         type: io.kestra.plugin.core.debug.Return
         format: "Deployment skipped - candidate model not better than production or force_deployment is false"
@@ -471,7 +471,7 @@ outputs:
   - id: deployment_result
     type: JSON
     value: "{{ read(outputs.fetch_and_compare_models.outputFiles['deployment_decision.json']) }}"
-  
+
   - id: build_info
     type: STRING
     value: "{{ outputs.final_build_info.value }}"

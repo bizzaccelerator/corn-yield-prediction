@@ -1,6 +1,7 @@
-import mlflow
 import json
 import os
+
+import mlflow
 import pandas as pd
 from mlflow.tracking import MlflowClient
 
@@ -279,9 +280,7 @@ try:
     with open("model_metadata.json", "w") as f:
         json.dump(model_metadata, f, indent=2)
 
-    print(
-        f"📋 Created model_metadata.json for Docker deployment (stage: {final_stage})"
-    )
+    print(f"📋 Created model_metadata.json for Docker deployment (stage: {final_stage})")
 
     # Print current model registry status
     print("\n📊 Current Model Registry Status:")

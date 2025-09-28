@@ -1,10 +1,10 @@
-from datetime import datetime
 import json
-import re
-import requests
 import os
-from typing import Dict, Any, Optional, Tuple, List
+import re
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
+import requests
 from evidently.ui.workspace import RemoteWorkspace
 
 # ======= CONFIG =======
@@ -320,13 +320,17 @@ def calculate_performance_change(
         direction = (
             "improvement"
             if absolute_change > 0
-            else "degradation" if absolute_change < 0 else "no_change"
+            else "degradation"
+            if absolute_change < 0
+            else "no_change"
         )
     else:  # RMSE/MAE lower is better
         direction = (
             "improvement"
             if absolute_change < 0
-            else "degradation" if absolute_change > 0 else "no_change"
+            else "degradation"
+            if absolute_change > 0
+            else "no_change"
         )
 
     return absolute_change, pct_change, direction
@@ -336,8 +340,8 @@ def send_email_alert(message: str, subject: str) -> bool:
     """Send email alert using SMTP."""
     try:
         import smtplib
-        from email.mime.text import MIMEText
         from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
         from email.utils import formataddr
 
         # Validate configuration
@@ -387,13 +391,13 @@ def send_email_alert(message: str, subject: str) -> bool:
         plain_body = f"""
         ML Model Alert - Corn Yield Prediction
         =====================================
-        
+
         {message}
-        
+
         Dashboard: {EVIDENTLY_SERVICE_URL}
-        
+
         Timestamp: {datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")}
-        
+
         ---
         This is an automated alert from the ML monitoring system.
         """
@@ -430,7 +434,6 @@ def check_and_send_alerts(baseline: Dict, current: Dict, comparison_results: Dic
         and current.get("drift_detected", False)
         and not baseline.get("drift_detected", False)
     ):
-
         message = (
             f"🔍 DATA DRIFT DETECTED\n\n"
             f"New drift has been detected in the current model report.\n\n"

@@ -14,7 +14,7 @@ resource "google_project_service" "required_apis" {
 
   disable_dependent_services = false
   disable_on_destroy         = false
-  
+
   timeouts {
     create = "10m"
     update = "10m"
@@ -162,7 +162,7 @@ resource "null_resource" "mlflow_image_build" {
 # PASO 2: Pequeña espera para asegurar que la imagen esté completamente disponible
 resource "time_sleep" "wait_for_image" {
   depends_on = [null_resource.mlflow_image_build]
-  
+
   create_duration = "30s"
 }
 
@@ -226,15 +226,15 @@ resource "google_cloud_run_service" "mlflow_server" {
 # IAM para acceso público (usando solo IAM binding para evitar duplicación)
 resource "google_cloud_run_service_iam_binding" "mlflow_public_access" {
   count = var.allow_public_access ? 1 : 0
-  
+
   service  = google_cloud_run_service.mlflow_server.name
   location = google_cloud_run_service.mlflow_server.location
   role     = "roles/run.invoker"
-  
+
   members = [
     "allUsers"
   ]
-  
+
   depends_on = [
     google_project_service.required_apis,
     google_cloud_run_service.mlflow_server

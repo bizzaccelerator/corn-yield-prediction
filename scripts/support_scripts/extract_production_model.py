@@ -1,11 +1,12 @@
+import json
+import os
+import pickle
+import shutil
+
+import joblib
 import mlflow
 import mlflow.tracking
 from mlflow.artifacts import download_artifacts
-import json
-import os
-import joblib
-import shutil
-import pickle
 
 
 def extract_production_model():

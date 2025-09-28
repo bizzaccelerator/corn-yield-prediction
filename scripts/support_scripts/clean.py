@@ -1,7 +1,8 @@
 # The first step involves importing the libraries required for the process:
-import pandas as pd
 import os
 import pickle
+
+import pandas as pd
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.model_selection import train_test_split
 

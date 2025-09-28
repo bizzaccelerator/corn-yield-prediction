@@ -2,15 +2,15 @@
 
 *A Python-based predictive application for estimating corn yields using survey data, containerized with Docker.*
 
-This fictional project was originally developed as a midterm evaluation for the Machine Learning Zoomcamp and improved as a final projecto for MLops Zoomcamp, both offered by Data Talks Club. Method and objectives were defined for educational purposes only, so I can show the knowledge appropiated during the mentioned training. 
+This fictional project was originally developed as a midterm evaluation for the Machine Learning Zoomcamp and improved as a final projecto for MLops Zoomcamp, both offered by Data Talks Club. Method and objectives were defined for educational purposes only, so I can show the knowledge appropiated during the mentioned training.
 
-The current project simulates a real scenario of information gathering to support effective political decision-making in a mayor's office in Kenya, aiming to ensure food security in the region. 
+The current project simulates a real scenario of information gathering to support effective political decision-making in a mayor's office in Kenya, aiming to ensure food security in the region.
 
 ![CornField_Lead](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/CornField_Lead.jpg)
 Photo: ©somkak – stock.adobe.com
 
 ## Problem statement
-This could be understood in two leves: a business problem and a technical problem. 
+This could be understood in two leves: a business problem and a technical problem.
 
 ### _Business problem:_
 Certain region in Kenya has experienced rapid population growth over the past decade in an underdeveloped economic environment. The social group living in this region considers _corn_ as the preferred base for most typical dishes; however, the low level of precipitation threatens sufficient production in the coming years. The Mayor's Office seeks to make the best decisions to ensure food security in the county. To acheive that goal, the prediction of corn production at a household level is a must. That’s why the managing team at the political office needs to know the expected levels of corn production at a household level, the key variables affecting it, so they can further improve the resources allocation process.
@@ -51,7 +51,7 @@ Together, these technologies form a modular, scalable, and cost-efficient pipeli
 ![mlops_infra](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/mlops_infra.jpg)
 Photo: Diagram of the technical infrastructure engineered.
 
-### _Rationale behind the solution:_ 
+### _Rationale behind the solution:_
 
 The end-to-end pipeline was designed to ensure accuracy, transparency, and operational robustness from data ingestion to model serving.
 
@@ -65,7 +65,7 @@ The prediction application was coded in python using a distribution of Anaconda.
 
 To ensure portability and consistent deployment across different environments, the application is containerized using Docker. This approach encapsulates the entire application through a [Dockerfile](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Dockerfile), including the Flask backend, the predictive model, and all dependencies, within a lightweight container. Docker allows the service to run seamlessly across various platforms, eliminating compatibility issues and simplifying deployment.
 
-Together, Flask and Docker provide a robust foundation for the application [predict.py](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/predict.py), enabling efficient development, deployment, and scalability while ensuring reliability and ease of maintenance. 
+Together, Flask and Docker provide a robust foundation for the application [predict.py](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/predict.py), enabling efficient development, deployment, and scalability while ensuring reliability and ease of maintenance.
 
 Once the best model was finalized, it was containerized with Docker and pushed to Google Container Registry (GCR). Deployment to Google Cloud Run exposed a REST API endpoint, enabling secure and scalable access for the Mayor’s Office. This serverless design provided elasticity to adapt to fluctuating demand while keeping costs efficient.
 
@@ -80,7 +80,7 @@ For artifact and report management, a dedicated structure in Google Cloud Storag
 ![Solution](https://github.com/bizzaccelerator/corn-yield-prediction/blob/main/Images/Solution.JPG)
 Photo: Diagram of the prediction service disposed.
 
-### _Key Benefits:_ 
+### _Key Benefits:_
 
 - Accuracy: The optimized Gradient Boosted Tree model provides high predictive performance, explaining over 90% of corn yield variability.
 - Scalability: Cloud Run and Docker ensure seamless scaling with fluctuating demand, while Terraform provisions reproducible infrastructure.
@@ -94,10 +94,10 @@ Check out the project [wiki](https://github.com/bizzaccelerator/corn-yield-predi
 
 ## License
 
-This project is no longer open source. It's no longer licensed under MIT.  
+This project is no longer open source. It's no longer licensed under MIT.
 
 As of September 19, 2025, all rights are reserved.
 
-- You may not copy, modify, or distribute this code without explicit permission.  
-- Past versions released under the MIT License remain available under that license.  
-- Future versions (commits after this date) are proprietary.  
+- You may not copy, modify, or distribute this code without explicit permission.
+- Past versions released under the MIT License remain available under that license.
+- Future versions (commits after this date) are proprietary.

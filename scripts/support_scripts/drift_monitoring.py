@@ -1,17 +1,17 @@
-from datetime import datetime
-import os
-import pandas as pd
 import json
-import numpy as np
-import joblib
-import requests
+import os
+from datetime import datetime
 
-from evidently import Report, Dataset, DataDefinition, Regression
-from evidently.ui.workspace import RemoteWorkspace
+import joblib
+import numpy as np
+import pandas as pd
+import requests
+from evidently import DataDefinition, Dataset, Regression, Report
+from evidently.metrics import *
+from evidently.presets import DataDriftPreset, DataSummaryPreset, RegressionPreset
 from evidently.sdk.models import PanelMetric
 from evidently.sdk.panels import DashboardPanelPlot
-from evidently.metrics import *
-from evidently.presets import DataDriftPreset, RegressionPreset, DataSummaryPreset
+from evidently.ui.workspace import RemoteWorkspace
 from sklearn.model_selection import train_test_split
 
 # Configuration for remote Evidently service

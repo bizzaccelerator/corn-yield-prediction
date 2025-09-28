@@ -17,4 +17,3 @@ output "kestra_bucket_url" {
   description = "URL of the Kestra GCS bucket"
   value       = google_storage_bucket.kestra_bucket.url
 }
-

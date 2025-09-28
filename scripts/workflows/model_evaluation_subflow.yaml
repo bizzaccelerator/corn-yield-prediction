@@ -38,7 +38,7 @@ tasks:
       MLFLOW_URL: "{{ vars.mlflow_url }}"
       MODEL_NAME: "{{ inputs.model_name }}"
     beforeCommands:
-      - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn 
+      - pip install mlflow==3.1.4 evidently==0.7.9 pandas scikit-learn
     commands:
       - python extract_production_model.py
     outputFiles:
@@ -65,7 +65,7 @@ tasks:
       - python load_and_prepare_base_data.py
     outputFiles:
     - "X_encoded.npy"
-    - "y.npy" 
+    - "y.npy"
     - "feature_names.npy"
 
   - id: prepare_base_report
@@ -122,7 +122,7 @@ tasks:
     outputFiles:
       - "target_val.npy"
       - "X_encoded_val.npy"
-  
+
   - id: analyze_data_drift
     type: io.kestra.plugin.scripts.python.Commands
     containerImage: ghcr.io/kestra-io/pydata:latest
@@ -194,7 +194,7 @@ tasks:
         level: ERROR
 
   - id: success_notification
-    type: io.kestra.plugin.core.flow.If  
+    type: io.kestra.plugin.core.flow.If
     condition: "{{ read(outputs.compare_model_performance.outputFiles['performance_comparison.json']) | jq('.alerts.alert_count == 0') }}"
     then:
       - id: log_success

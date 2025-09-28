@@ -13,34 +13,34 @@ log() {
 # CAMBIO: Función para verificar comandos requeridos
 check_prerequisites() {
     log "Verificando prerequisitos..."
-    
+
     if ! command -v terraform &> /dev/null; then
         echo "❌ ERROR: Terraform no está instalado"
         exit 1
     fi
-    
+
     if ! command -v gcloud &> /dev/null; then
         echo "❌ ERROR: Google Cloud CLI no está instalado"
         exit 1
     fi
-    
+
     log "✅ Prerequisitos verificados"
 }
 
 # CAMBIO: Función para verificar configuración de Terraform
 validate_terraform_config() {
     log "Validando configuración de Terraform..."
-    
+
     if [ ! -f "main.tf" ]; then
         echo "❌ ERROR: main.tf no encontrado en el directorio actual"
         exit 1
     fi
-    
+
     if [ ! -f "variables.tfvars" ]; then
         echo "❌ ERROR: variables.tfvars no encontrado"
         exit 1
     fi
-    
+
     log "✅ Archivos de configuración encontrados"
 }
 
@@ -62,16 +62,16 @@ cleanup_if_needed() {
 deploy_kestra() {
     log "1️⃣  Inicializando Terraform..."
     terraform init
-    
+
     log "2️⃣  Validando configuración..."
     terraform validate
-    
+
     log "3️⃣  Planificando despliegue..."
     terraform plan -var-file="variables.tfvars" -out=tfplan
-    
+
     log "4️⃣  Aplicando módulo GCS..."
     terraform apply -target=module.gcs -var-file="variables.tfvars" -auto-approve
-    
+
     log "5️⃣  Verificando creación del bucket de Kestra..."
     BUCKET_NAME=$(terraform output -raw kestra_bucket_name 2>/dev/null || echo "")
     if [ -z "$BUCKET_NAME" ]; then
@@ -81,17 +81,17 @@ deploy_kestra() {
         exit 1
     fi
     log "✅ Bucket de Kestra creado: $BUCKET_NAME"
-    
+
     log "6️⃣  Aplicando módulo Kestra (Cloud SQL + VM)..."
     terraform apply -target=module.kestra -var-file="variables.tfvars" -auto-approve
-    
+
     log "7️⃣  Aplicando configuración completa..."
     terraform apply -var-file="variables.tfvars" -auto-approve
-    
+
     log "8️⃣  Obteniendo información de despliegue..."
     KESTRA_IP=$(terraform output -raw kestra_public_ip)
     KESTRA_URL=$(terraform output -raw kestra_url)
-    
+
     log "✅ DESPLIEGUE COMPLETADO"
     echo ""
     echo "📋 INFORMACIÓN DEL DESPLIEGUE:"
@@ -104,18 +104,18 @@ deploy_kestra() {
 # CAMBIO: Función para verificar que Kestra esté funcionando
 verify_kestra_deployment() {
     log "🔍 Verificando despliegue de Kestra..."
-    
+
     KESTRA_IP=$(terraform output -raw kestra_public_ip)
     KESTRA_URL="http://$KESTRA_IP:8080"
-    
+
     log "Esperando que Kestra esté listo (esto puede tomar varios minutos)..."
-    
+
     max_attempts=30
     attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         log "Intento $attempt/$max_attempts: Verificando $KESTRA_URL/health"
-        
+
         if curl -f -s --connect-timeout 10 --max-time 15 "$KESTRA_URL/health" >/dev/null 2>&1; then
             log "✅ SUCCESS: Kestra está funcionando correctamente!"
             echo ""
@@ -129,7 +129,7 @@ verify_kestra_deployment() {
         fi
         ((attempt++))
     done
-    
+
     log "⚠️  WARNING: No se pudo verificar que Kestra esté funcionando"
     log "Esto puede ser normal si Kestra aún se está iniciando"
     echo ""
@@ -143,17 +143,17 @@ verify_kestra_deployment() {
 # CAMBIO: Función principal
 main() {
     echo "Iniciando despliegue automatizado..."
-    
+
     check_prerequisites
     validate_terraform_config
     cleanup_if_needed
-    
+
     log "🏁 Comenzando despliegue..."
     deploy_kestra
-    
+
     log "🔍 Verificando funcionamiento..."
     verify_kestra_deployment
-    
+
     log "🎯 Proceso completado"
 }
 

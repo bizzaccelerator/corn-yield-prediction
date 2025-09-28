@@ -39,7 +39,7 @@ tasks:
       KAGGLE_KEY: "{{ kv('KAGGLE_KEY') }}"
     beforeCommands:
     - pip install kagglehub
-    - pip install kaggle 
+    - pip install kaggle
     outputFiles:
       - "corn_data.csv"
     script: |
@@ -60,7 +60,7 @@ tasks:
       include:
         - clean.py
     beforeCommands:
-      - pip install pandas scikit-learn 
+      - pip install pandas scikit-learn
     inputFiles:
       corn.csv: "{{ outputs.download_dataset.outputFiles['corn_data.csv'] }}"
     commands:
@@ -68,7 +68,7 @@ tasks:
     outputFiles:
       - "data_splits/*.csv"
       - "vectorizer.pkl"
-  
+
   - id: if_linear
     type: io.kestra.plugin.core.flow.If
     condition: "{{inputs.model_selection == 'linear'}}"
@@ -76,7 +76,7 @@ tasks:
     - id: train_linear_model
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
-      description: Training the linear model 
+      description: Training the linear model
       taskRunner:
         type: io.kestra.plugin.core.runner.Process
       namespaceFiles:
@@ -104,40 +104,40 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
-    - id: optimize_train_linear     
-      type: io.kestra.plugin.scripts.python.Commands     
-      containerImage: ghcr.io/kestra-io/pydata:latest     
-      description: Optimizer for linear regression model      
-      taskRunner:       
-        type: io.kestra.plugin.core.runner.Process     
-      namespaceFiles:       
-        enabled: true       
-        include:         
-          - optimize.py     
-      env:       
-        # MLflow configuration - using your Cloud Run URL       
-        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"       
-        # Optional: Set experiment name       
-        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"       
-        MODEL_NAME: "{{ vars.model_name}}"       
-        MODEL_TYPE: "{{ inputs.model_selection}}"     
-      beforeCommands:       
-        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy     
-      inputFiles:       
-        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"       
-        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"       
-        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"     
-      commands:       
-        - python optimize.py     
-      outputFiles:       
+
+    - id: optimize_train_linear
+      type: io.kestra.plugin.scripts.python.Commands
+      containerImage: ghcr.io/kestra-io/pydata:latest
+      description: Optimizer for linear regression model
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      namespaceFiles:
+        enabled: true
+        include:
+          - optimize.py
+      env:
+        # MLflow configuration - using your Cloud Run URL
+        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+        # Optional: Set experiment name
+        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+        MODEL_NAME: "{{ vars.model_name}}"
+        MODEL_TYPE: "{{ inputs.model_selection}}"
+      beforeCommands:
+        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy
+      inputFiles:
+        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
+        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
+        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+      commands:
+        - python optimize.py
+      outputFiles:
         - "model_artifacts/**"
         - "*.pkl"
-        - "*.json"      
+        - "*.json"
 
     - id: compare_between_linear_and_optimized_models
       type: io.kestra.plugin.scripts.python.Commands
@@ -158,7 +158,7 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
+
     - id: linear_registry_management
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
@@ -180,7 +180,7 @@ tasks:
         - python model_registry.py
       outputFiles:
         - "*.json"
-  
+
   - id: if_lasso
     type: io.kestra.plugin.core.flow.If
     condition: "{{inputs.model_selection == 'lasso'}}"
@@ -188,7 +188,7 @@ tasks:
     - id: train_lasso_model
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
-      description: Training the ridge model 
+      description: Training the ridge model
       taskRunner:
         type: io.kestra.plugin.core.runner.Process
       namespaceFiles:
@@ -216,40 +216,40 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
-    - id: optimize_lasso_regressor     
-      type: io.kestra.plugin.scripts.python.Commands     
-      containerImage: ghcr.io/kestra-io/pydata:latest     
-      description: Optimizer for Ridge regressor model      
-      taskRunner:       
-        type: io.kestra.plugin.core.runner.Process     
-      namespaceFiles:       
-        enabled: true       
-        include:         
-          - optimize.py     
-      env:       
-        # MLflow configuration - using your Cloud Run URL       
-        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"       
-        # Optional: Set experiment name       
-        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"       
-        MODEL_NAME: "{{ vars.model_name}}"       
-        MODEL_TYPE: "{{ inputs.model_selection}}"     
-      beforeCommands:       
-        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy     
-      inputFiles:       
-        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"       
-        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"       
-        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"     
-      commands:       
-        - python optimize.py     
-      outputFiles:       
+
+    - id: optimize_lasso_regressor
+      type: io.kestra.plugin.scripts.python.Commands
+      containerImage: ghcr.io/kestra-io/pydata:latest
+      description: Optimizer for Ridge regressor model
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      namespaceFiles:
+        enabled: true
+        include:
+          - optimize.py
+      env:
+        # MLflow configuration - using your Cloud Run URL
+        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+        # Optional: Set experiment name
+        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+        MODEL_NAME: "{{ vars.model_name}}"
+        MODEL_TYPE: "{{ inputs.model_selection}}"
+      beforeCommands:
+        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy
+      inputFiles:
+        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
+        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
+        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+      commands:
+        - python optimize.py
+      outputFiles:
         - "model_artifacts/**"
         - "*.pkl"
-        - "*.json"      
+        - "*.json"
 
     - id: compare_between_lasso_and_optimized_models
       type: io.kestra.plugin.scripts.python.Commands
@@ -270,7 +270,7 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
+
     - id: lasso_registry_management
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
@@ -292,7 +292,7 @@ tasks:
         - python model_registry.py
       outputFiles:
         - "*.json"
-  
+
   - id: if_ridge
     type: io.kestra.plugin.core.flow.If
     condition: "{{inputs.model_selection == 'ridge'}}"
@@ -300,7 +300,7 @@ tasks:
     - id: train_ridge_model
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
-      description: Training the ridge model 
+      description: Training the ridge model
       taskRunner:
         type: io.kestra.plugin.core.runner.Process
       namespaceFiles:
@@ -328,40 +328,40 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
-    - id: optimize_ridge_regressor     
-      type: io.kestra.plugin.scripts.python.Commands     
-      containerImage: ghcr.io/kestra-io/pydata:latest     
-      description: Optimizer for Ridge regressor model      
-      taskRunner:       
-        type: io.kestra.plugin.core.runner.Process     
-      namespaceFiles:       
-        enabled: true       
-        include:         
-          - optimize.py     
-      env:       
-        # MLflow configuration - using your Cloud Run URL       
-        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"       
-        # Optional: Set experiment name       
-        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"       
-        MODEL_NAME: "{{ vars.model_name}}"       
-        MODEL_TYPE: "{{ inputs.model_selection}}"     
-      beforeCommands:       
-        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy     
-      inputFiles:       
-        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"       
-        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"       
-        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"     
-      commands:       
-        - python optimize.py     
-      outputFiles:       
+
+    - id: optimize_ridge_regressor
+      type: io.kestra.plugin.scripts.python.Commands
+      containerImage: ghcr.io/kestra-io/pydata:latest
+      description: Optimizer for Ridge regressor model
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      namespaceFiles:
+        enabled: true
+        include:
+          - optimize.py
+      env:
+        # MLflow configuration - using your Cloud Run URL
+        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+        # Optional: Set experiment name
+        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+        MODEL_NAME: "{{ vars.model_name}}"
+        MODEL_TYPE: "{{ inputs.model_selection}}"
+      beforeCommands:
+        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy
+      inputFiles:
+        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
+        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
+        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+      commands:
+        - python optimize.py
+      outputFiles:
         - "model_artifacts/**"
         - "*.pkl"
-        - "*.json"      
+        - "*.json"
 
     - id: compare_between_ridge_and_optimized_models
       type: io.kestra.plugin.scripts.python.Commands
@@ -382,7 +382,7 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
+
     - id: ridge_registry_management
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
@@ -412,7 +412,7 @@ tasks:
     - id: train_gbr_model
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
-      description: Training the ridge model 
+      description: Training the ridge model
       taskRunner:
         type: io.kestra.plugin.core.runner.Process
       namespaceFiles:
@@ -440,40 +440,40 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
-    - id: optimize_gb_regressor     
-      type: io.kestra.plugin.scripts.python.Commands     
-      containerImage: ghcr.io/kestra-io/pydata:latest     
-      description: Optimizer for Ridge regressor model      
-      taskRunner:       
-        type: io.kestra.plugin.core.runner.Process     
-      namespaceFiles:       
-        enabled: true       
-        include:         
-          - optimize.py     
-      env:       
-        # MLflow configuration - using your Cloud Run URL       
-        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"       
-        # Optional: Set experiment name       
-        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"       
-        MODEL_NAME: "{{ vars.model_name}}"       
-        MODEL_TYPE: "{{ inputs.model_selection}}"     
-      beforeCommands:       
-        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy     
-      inputFiles:       
-        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"       
-        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"       
-        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"       
-        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"       
-        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"     
-      commands:       
-        - python optimize.py     
-      outputFiles:       
+
+    - id: optimize_gb_regressor
+      type: io.kestra.plugin.scripts.python.Commands
+      containerImage: ghcr.io/kestra-io/pydata:latest
+      description: Optimizer for Ridge regressor model
+      taskRunner:
+        type: io.kestra.plugin.core.runner.Process
+      namespaceFiles:
+        enabled: true
+        include:
+          - optimize.py
+      env:
+        # MLflow configuration - using your Cloud Run URL
+        MLFLOW_TRACKING_URI: "{{ vars.mlflow_tracking_uri }}"
+        # Optional: Set experiment name
+        MLFLOW_EXPERIMENT_NAME: "{{ vars.experiment_name }}"
+        MODEL_NAME: "{{ vars.model_name}}"
+        MODEL_TYPE: "{{ inputs.model_selection}}"
+      beforeCommands:
+        - pip install pandas numpy scikit-learn mlflow==3.1.4 google-cloud-storage hyperopt scipy
+      inputFiles:
+        X_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_train.csv'] }}"
+        y_train.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_train.csv'] }}"
+        X_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_val.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        X_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/X_val.csv'] }}"
+        y_test.csv: "{{ outputs.clean_split.outputFiles['data_splits/y_val.csv'] }}"
+        dict_vectorizer: "{{ outputs.clean_split.outputFiles['vectorizer.pkl'] }}"
+      commands:
+        - python optimize.py
+      outputFiles:
         - "model_artifacts/**"
         - "*.pkl"
-        - "*.json"      
+        - "*.json"
 
     - id: compare_between_gbr_and_optimized_models
       type: io.kestra.plugin.scripts.python.Commands
@@ -494,7 +494,7 @@ tasks:
         - "model_artifacts/**"
         - "*.pkl"
         - "*.json"
-    
+
     - id: gbr_registry_management
       type: io.kestra.plugin.scripts.python.Commands
       containerImage: ghcr.io/kestra-io/pydata:latest
@@ -516,7 +516,7 @@ tasks:
         - python model_registry.py
       outputFiles:
         - "*.json"
-  
+
   - id: select_model_info
     type: io.kestra.plugin.core.flow.Switch
     value: "{{ inputs.model_selection }}"
@@ -532,7 +532,7 @@ tasks:
             print("Linear model info selected")
           outputFiles:
             - final_run_info.json
-      
+
       lasso:
         - id: get_lasso_info
           type: io.kestra.plugin.scripts.python.Script
@@ -544,7 +544,7 @@ tasks:
             print("Lasso model info selected")
           outputFiles:
             - final_run_info.json
-      
+
       ridge:
         - id: get_ridge_info
           type: io.kestra.plugin.scripts.python.Script
@@ -556,7 +556,7 @@ tasks:
             print("Ridge model info selected")
           outputFiles:
             - final_run_info.json
-      
+
       gbr:
         - id: get_gbr_info
           type: io.kestra.plugin.scripts.python.Script
@@ -612,11 +612,11 @@ tasks:
         - |
           # Create app directory
           mkdir -p app
-          
+
           # Move model files to app directory
           mv model.bin app/
           mv model_metadata.json app/
-          
+
           # Create requirements.txt
           cat > app/requirements.txt << EOF
           flask==2.3.3
@@ -648,10 +648,10 @@ tasks:
           try:
               with open(model_file, 'rb') as f_in:
                   dv, model = pickle.load(f_in)
-                  
+
               with open('model_metadata.json', 'r') as f:
                   metadata = json.load(f)
-                  
+
               logger.info(f"Model loaded: {metadata['model_name']} v{metadata['model_version']}")
           except Exception as e:
               logger.error(f"Failed to load model: {e}")
@@ -680,31 +680,31 @@ tasks:
           FROM python:3.11-slim
 
           WORKDIR /app
-          
+
           # Copy requirements and install dependencies
           COPY app/requirements.txt .
           RUN pip install --no-cache-dir -r requirements.txt
-          
+
           # Copy application files
           COPY app/ .
-          
+
           # Expose the application port
           EXPOSE 9696
 
           # Set the default command to run the application
           CMD ["waitress-serve", "--listen=0.0.0.0:9696", "main:app"]
           EOF
-          
+
           # Archive the app folder
           tar -czf app.tar.gz app/
 
           echo "Docker files created successfully"
-        
+
         outputFiles:
           - "Dockerfile"
           - "app/**"
           - "app.tar.gz"
-        
+
       - id: build_and_push_to_gcr
         type: io.kestra.plugin.scripts.shell.Commands
         description: Build Docker image using cloudbuild.yaml
@@ -722,75 +722,75 @@ tasks:
         commands:
           - |
               set -e
-              
+
               echo "=== Building with cloudbuild.yaml method ==="
-              
+
               echo "1. Setup..."
               gcloud auth activate-service-account --key-file=service_account_key.json
               gcloud config set project $PROJECT_ID
               apk add --no-cache jq
               tar -xzf app_archive
-              
+
               MODEL_VERSION=$(jq -r '.model_version // "1"' model_metadata.json)
               TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-              
+
               echo "Project: $PROJECT_ID"
-              echo "Service: $SERVICE_NAME"  
+              echo "Service: $SERVICE_NAME"
               echo "Version: $MODEL_VERSION"
               echo "Timestamp: $TIMESTAMP"
-              
+
               echo "2. Creating cloudbuild.yaml..."
               cat > cloudbuild.yaml << EOF
               steps:
               # Build the Docker image
               - name: 'gcr.io/cloud-builders/docker'
-                args: 
+                args:
                   - 'build'
                   - '-t'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
                   - '.'
-              
+
               # Tag with version
               - name: 'gcr.io/cloud-builders/docker'
-                args: 
+                args:
                   - 'tag'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION'
-              
-              # Tag with timestamp  
+
+              # Tag with timestamp
               - name: 'gcr.io/cloud-builders/docker'
                 args:
-                  - 'tag' 
+                  - 'tag'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
                   - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
-              
+
               # Push all images
               images:
               - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:latest'
-              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION' 
+              - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:v$MODEL_VERSION'
               - 'gcr.io/$PROJECT_ID/$SERVICE_NAME:$TIMESTAMP'
-              
+
               timeout: '1200s'
-              
+
               options:
                 # Disable log streaming to avoid permission issues
                 logging: CLOUD_LOGGING_ONLY
               EOF
-              
+
               echo "3. Starting build with config file..."
               BUILD_ID=$(gcloud builds submit \
                 --config=cloudbuild.yaml \
                 --project=$PROJECT_ID \
                 --async \
                 --format="value(name)" | sed 's|.*/||')
-              
+
               echo "Build ID: $BUILD_ID"
-              
+
               echo "4. Monitoring build..."
               while true; do
                   STATUS=$(gcloud builds describe $BUILD_ID --project=$PROJECT_ID --format="value(status)")
                   echo "Build status: $STATUS"
-                  
+
                   case $STATUS in
                       "SUCCESS")
                           echo "Build successful!"
@@ -805,12 +805,12 @@ tasks:
                           ;;
                   esac
               done
-              
+
               echo "5. Creating output..."
               cat > build_info.json << EOF
               {
                 "build_status": "SUCCESS",
-                "build_id": "$BUILD_ID", 
+                "build_id": "$BUILD_ID",
                 "project_id": "$PROJECT_ID",
                 "service_name": "$SERVICE_NAME",
                 "model_version": "$MODEL_VERSION",
@@ -823,14 +823,14 @@ tasks:
                 "console_url": "https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
               }
               EOF
-              
+
               echo "Process completed!"
               cat build_info.json
-              
+
         outputFiles:
           - "build_info.json"
           - "cloudbuild.yaml"
-      
+
     else:
     - id: skip_deployment
       type: io.kestra.plugin.core.log.Log

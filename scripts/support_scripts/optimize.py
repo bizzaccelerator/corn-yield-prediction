@@ -1,18 +1,20 @@
-from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
-from sklearn.linear_model import LinearRegression, Lasso, Ridge
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import mean_squared_error, r2_score
-from scipy.sparse import hstack, csr_matrix
+import json
+import os
+import pickle
+
+import joblib
 import mlflow
 import mlflow.sklearn
+import numpy as np
+import pandas as pd
+from hyperopt import STATUS_OK, Trials, fmin, hp, tpe
+from scipy.sparse import csr_matrix, hstack
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import Lasso, LinearRegression, Ridge
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.model_selection import cross_val_score
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-import pandas as pd
-import numpy as np
-import os, pickle, json
-import joblib
-
 
 ########## THE FIRST PART IS LOADING THE DATA AND CONFIG
 
@@ -127,14 +129,12 @@ def objective_gbr(params):
 ############ Evaluation and optimization of best models
 
 if model_selection == "linear":
-
     print(
         "There is no need for optimization of this model. But Test will be considered."
     )
 
     # Start an MLflow run
     with mlflow.start_run(run_name="linear-regression-corn-yield"):
-
         # Log dataset information
         mlflow.log_param("n_features", X_train_full.shape[1])
         mlflow.log_param("n_train_samples", X_train_full.shape[0])
@@ -189,13 +189,11 @@ if model_selection == "linear":
 
 
 elif model_selection == "ridge":
-
     # DISABLE autologging for hyperopt optimization to avoid conflicts
     mlflow.sklearn.autolog(disable=True)
 
     # Start an MLflow run
     with mlflow.start_run(run_name="Ridge-regression-corn-yield"):
-
         # Log dataset information
         mlflow.log_param("n_features", X_train_full.shape[1])
         mlflow.log_param("n_train_samples", X_train_full.shape[0])
@@ -301,13 +299,11 @@ elif model_selection == "ridge":
 
 
 elif model_selection == "lasso":
-
     # DISABLE autologging for hyperopt optimization to avoid conflicts
     mlflow.sklearn.autolog(disable=True)
 
     # Start an MLflow run
     with mlflow.start_run(run_name="lasso-regression-corn-yield"):
-
         # Log dataset information
         mlflow.log_param("n_features", X_train_full.shape[1])
         mlflow.log_param("n_train_samples", X_train_full.shape[0])
@@ -416,13 +412,11 @@ elif model_selection == "lasso":
 
 
 elif model_selection == "gbr":
-
     # DISABLE autologging for hyperopt optimization to avoid conflicts
     mlflow.sklearn.autolog(disable=True)
 
     # Start an MLflow run
     with mlflow.start_run(run_name="Gradient-Boosting-regression-corn-yield"):
-
         # Log dataset information
         mlflow.log_param("n_features", X_train_full.shape[1])
         mlflow.log_param("n_train_samples", X_train_full.shape[0])

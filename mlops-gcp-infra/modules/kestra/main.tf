@@ -12,7 +12,7 @@ data "google_project" "current" {
 resource "google_project_service" "cloudbuild_api" {
   project = var.project_id
   service = "cloudbuild.googleapis.com"
-  
+
   disable_dependent_services = false
   disable_on_destroy         = false
 }
@@ -20,7 +20,7 @@ resource "google_project_service" "cloudbuild_api" {
 resource "google_project_service" "containerregistry_api" {
   project = var.project_id
   service = "containerregistry.googleapis.com"
-  
+
   disable_dependent_services = false
   disable_on_destroy         = false
 }
@@ -28,7 +28,7 @@ resource "google_project_service" "containerregistry_api" {
 resource "google_project_service" "storage_api" {
   project = var.project_id
   service = "storage.googleapis.com"
-  
+
   disable_dependent_services = false
   disable_on_destroy         = false
 }
@@ -37,7 +37,7 @@ resource "google_project_service" "storage_api" {
 resource "google_project_service" "logging_api" {
   project = var.project_id
   service = "logging.googleapis.com"
-  
+
   disable_dependent_services = false
   disable_on_destroy         = false
 }
@@ -72,7 +72,7 @@ resource "google_sql_database_instance" "kestra_db" {
   }
 
   deletion_protection = false
-  
+
   # Permitir eliminación incluso con usuarios/bases de datos
   lifecycle {
     prevent_destroy = false
@@ -95,7 +95,7 @@ resource "google_service_account" "kestra_sa" {
   account_id   = "kestra-service-account"
   display_name = "Kestra Service Account"
   description  = "Service account for Kestra VM with Cloud Build permissions"
-  
+
   # Permitir eliminación
   lifecycle {
     prevent_destroy = false
@@ -107,7 +107,7 @@ resource "google_project_iam_member" "kestra_storage_admin" {
   project = var.project_id
   role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.kestra_sa.email}"
-  
+
   depends_on = [google_project_service.storage_api]
 }
 
@@ -128,7 +128,7 @@ resource "google_project_iam_member" "kestra_cloudbuild_builder" {
   project = var.project_id
   role    = "roles/cloudbuild.builds.builder"
   member  = "serviceAccount:${google_service_account.kestra_sa.email}"
-  
+
   depends_on = [google_project_service.cloudbuild_api]
 }
 
@@ -136,7 +136,7 @@ resource "google_project_iam_member" "kestra_cloudbuild_editor" {
   project = var.project_id
   role    = "roles/cloudbuild.builds.editor"
   member  = "serviceAccount:${google_service_account.kestra_sa.email}"
-  
+
   depends_on = [google_project_service.cloudbuild_api]
 }
 
@@ -145,7 +145,7 @@ resource "google_project_iam_member" "kestra_container_registry_service_agent" {
   project = var.project_id
   role    = "roles/containerregistry.ServiceAgent"
   member  = "serviceAccount:${google_service_account.kestra_sa.email}"
-  
+
   depends_on = [google_project_service.containerregistry_api]
 }
 
@@ -154,7 +154,7 @@ resource "google_project_iam_member" "kestra_storage_object_admin" {
   project = var.project_id
   role    = "roles/storage.objectAdmin"
   member  = "serviceAccount:${google_service_account.kestra_sa.email}"
-  
+
   depends_on = [google_project_service.storage_api]
 }
 
@@ -163,7 +163,7 @@ resource "google_project_iam_member" "kestra_logging_viewer" {
   project = var.project_id
   role    = "roles/logging.viewer"
   member  = "serviceAccount:${google_service_account.kestra_sa.email}"
-  
+
   depends_on = [google_project_service.logging_api]
 }
 
@@ -179,7 +179,7 @@ resource "google_project_iam_member" "kestra_source_repo_admin" {
   project = var.project_id
   role    = "roles/source.admin"
   member  = "serviceAccount:${google_service_account.kestra_sa.email}"
-  
+
   depends_on = [google_project_service.cloudbuild_api]
 }
 
@@ -188,7 +188,7 @@ resource "google_project_iam_member" "cloudbuild_sa_storage_admin" {
   project = var.project_id
   role    = "roles/storage.admin"
   member  = "serviceAccount:${data.google_project.current.number}@cloudbuild.gserviceaccount.com"
-  
+
   depends_on = [google_project_service.cloudbuild_api]
 }
 
@@ -196,7 +196,7 @@ resource "google_project_iam_member" "cloudbuild_sa_container_developer" {
   project = var.project_id
   role    = "roles/container.developer"
   member  = "serviceAccount:${data.google_project.current.number}@cloudbuild.gserviceaccount.com"
-  
+
   depends_on = [google_project_service.cloudbuild_api]
 }
 
@@ -226,7 +226,7 @@ resource "google_storage_bucket" "cloudbuild_logs" {
   location = var.region
 
   uniform_bucket_level_access = true
-  
+
   # Forzar eliminación incluso con objetos
   force_destroy = true
 
@@ -238,7 +238,7 @@ resource "google_storage_bucket" "cloudbuild_logs" {
       type = "Delete"
     }
   }
-  
+
   # Permitir eliminación
   lifecycle {
     prevent_destroy = false
@@ -271,7 +271,7 @@ resource "google_compute_instance" "kestra_vm" {
   zone         = var.zone
 
   tags = ["kestra-server"]
-  
+
   # Permitir eliminación
   allow_stopping_for_update = true
 
@@ -281,7 +281,7 @@ resource "google_compute_instance" "kestra_vm" {
       size  = 30
       type  = "pd-standard"
     }
-    
+
     # Eliminar disco al eliminar la instancia
     auto_delete = true
   }
@@ -304,7 +304,7 @@ resource "google_compute_instance" "kestra_vm" {
 
   # Allow recreation when startup script changes
   metadata_startup_script = local.startup_script
-  
+
   # Permitir eliminación
   lifecycle {
     prevent_destroy = false
@@ -339,25 +339,25 @@ output "cleanup_commands" {
   description = "Commands to run if terraform destroy fails"
   value = <<-EOT
     # Si terraform destroy falla, ejecuta estos comandos manualmente:
-    
+
     # 1. Eliminar instancia VM
     gcloud compute instances delete ${replace(var.project_name, "_", "-")}-kestra-vm --zone=${var.zone} --quiet
-    
+
     # 2. Liberar IP estática
     gcloud compute addresses delete ${replace(var.project_name, "_", "-")}-kestra-ip --region=${var.region} --quiet
-    
+
     # 3. Eliminar regla de firewall
     gcloud compute firewall-rules delete ${replace(var.project_name, "_", "-")}-kestra-firewall --quiet
-    
+
     # 4. Eliminar bucket de logs (forzar)
     gsutil rm -r gs://${var.project_id}-cloudbuild-logs
-    
+
     # 5. Eliminar instancia de Cloud SQL
     gcloud sql instances delete ${replace(var.project_name, "_", "-")}-kestra-db --quiet
-    
+
     # 6. Eliminar service account
     gcloud iam service-accounts delete kestra-service-account@${var.project_id}.iam.gserviceaccount.com --quiet
-    
+
     # 7. Limpiar imágenes de Container Registry (opcional)
     gcloud container images list --repository=gcr.io/${var.project_id} --format="value(name)" | xargs -I {} gcloud container images delete {} --quiet --force-delete-tags
   EOT
