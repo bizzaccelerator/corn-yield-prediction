@@ -320,17 +320,13 @@ def calculate_performance_change(
         direction = (
             "improvement"
             if absolute_change > 0
-            else "degradation"
-            if absolute_change < 0
-            else "no_change"
+            else "degradation" if absolute_change < 0 else "no_change"
         )
     else:  # RMSE/MAE lower is better
         direction = (
             "improvement"
             if absolute_change < 0
-            else "degradation"
-            if absolute_change > 0
-            else "no_change"
+            else "degradation" if absolute_change > 0 else "no_change"
         )
 
     return absolute_change, pct_change, direction

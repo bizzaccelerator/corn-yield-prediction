@@ -13,6 +13,7 @@ def test_basic_imports():
     try:
         import numpy
         import pandas
+
         assert True
     except ImportError as e:
         assert False, f"Failed to import required package: {e}"
@@ -21,13 +22,13 @@ def test_basic_imports():
 def test_project_structure():
     """Test basic project structure exists."""
     import os
-    
+
     # Add paths that should exist in your project
     expected_files = [
         "requirements.txt",  # Adjust based on your project
-        ".github/workflows/ci.yml"
+        ".github/workflows/ci.yml",
     ]
-    
+
     for file_path in expected_files:
         if os.path.exists(file_path):
             assert os.path.exists(file_path), f"Expected file {file_path} not found"
