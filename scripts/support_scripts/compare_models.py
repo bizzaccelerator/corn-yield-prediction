@@ -33,11 +33,11 @@ def compare_metrics(raw_metrics, optimized_metrics):
     print("MODEL COMPARISON RESULTS")
     print("=" * 50)
 
-    print(f"\nRaw Model:")
+    print(f"\nRaw Model: ")
     print(f"  RMSE: {raw_rmse:.4f}")
     print(f"  R² Score: {raw_r2:.4f}")
 
-    print(f"\nOptimized Model:")
+    print(f"\nOptimized Model: ")
     print(f"  RMSE: {optimized_rmse:.4f}")
     print(f"  R² Score: {optimized_r2:.4f}")
 
@@ -45,7 +45,7 @@ def compare_metrics(raw_metrics, optimized_metrics):
     rmse_improvement = (raw_rmse - optimized_rmse) / raw_rmse * 100
     r2_improvement = (optimized_r2 - raw_r2) / abs(raw_r2) * 100 if raw_r2 != 0 else 0
 
-    print(f"\nImprovement Analysis:")
+    print(f"\nImprovement Analysis: ")
     print(f"  RMSE improvement: {rmse_improvement:.2f}%")
     print(f"  R² improvement: {r2_improvement:.2f}%")
 
@@ -62,21 +62,17 @@ def compare_metrics(raw_metrics, optimized_metrics):
             # RMSE is better but R² is worse - need to decide
             if rmse_improvement > 5.0:  # Significant RMSE improvement
                 winner = "optimized"
-                reason = f"Significant RMSE improvement ({
-                    rmse_improvement:.2f}%) outweighs R² decrease"
+                reason = f"Significant RMSE improvement ({rmse_improvement:.2f}%) outweighs R² decrease"
             else:
                 winner = "Raw"
-                reason = f"RMSE improvement ({
-                    rmse_improvement:.2f}%) not significant enough to justify R² decrease"
+                reason = f"RMSE improvement ({rmse_improvement:.2f}%) not significant enough to justify R² decrease"
     elif optimized_r2 > raw_r2 and r2_improvement >= r2_threshold:
         if optimized_rmse <= raw_rmse or abs(rmse_improvement) <= 1.0:
             winner = "optimized"
-            reason = f"Better R² ({
-                r2_improvement:.2f}% improvement) with comparable/better RMSE"
+            reason = f"Better R² ({r2_improvement:.2f}% improvement) with comparable/better RMSE"
         else:
             winner = "raw"
-            reason = f"R² improvement doesn't justify RMSE increase of {
-                abs(rmse_improvement):.2f}%"
+            reason = f"R² improvement doesn't justify RMSE increase of {abs(rmse_improvement):.2f}%"
     else:
         winner = "raw"
         reason = "Optimization did not provide sufficient improvement"

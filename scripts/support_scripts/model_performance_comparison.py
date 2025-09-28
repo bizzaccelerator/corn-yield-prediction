@@ -567,14 +567,10 @@ def main():
     print("Selected baseline (oldest) and current (newest) reports")
     print("=" * 40)
     print(
-        f"Baseline report: {
-            baseline.get('report_id')}  timestamp: {
-            baseline.get('timestamp')}"
-    )
+        f"Baseline report: {baseline.get('report_id')}  timestamp: {baseline.get('timestamp')}"
+        )
     print(
-        f"Current  report: {
-            current.get('report_id')}  timestamp: {
-            current.get('timestamp')}"
+        f"Current  report: {current.get('report_id')}  timestamp: {current.get('timestamp')}"
     )
 
     # Compare metrics
