@@ -568,7 +568,7 @@ def main():
     print("=" * 40)
     print(
         f"Baseline report: {baseline.get('report_id')}  timestamp: {baseline.get('timestamp')}"
-        )
+    )
     print(
         f"Current  report: {current.get('report_id')}  timestamp: {current.get('timestamp')}"
     )
@@ -658,9 +658,7 @@ def main():
     print(f"\n[info] Results saved to performance_comparison.json")
     if alert_messages:
         print(
-            f"[info] {
-                len(alert_messages)} alert(s) generated and sent to: {
-                ', '.join(alerts_sent)}"
+            f"[info] {len(alert_messages)} alert(s) generated and sent to: {', '.join(alerts_sent)}"
         )
 
     print("\n" + "=" * 60)

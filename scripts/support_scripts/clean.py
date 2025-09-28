@@ -68,7 +68,7 @@ print(
 filter = corn_subset["acreage"].isna()
 corn_subset = corn_subset[~filter]
 
-# It makes sense that farmers in a developing country might have little to no formal education. 
+# It makes sense that farmers in a developing country might have little to no formal education.
 # Therefore, we can reasonably infer that many of them have not achieved any formal academic qualifications.
 # We populate the missing values in the education column with "No educated":
 corn_subset.loc[corn_subset["education"].isna()] = corn_subset.loc[
@@ -76,7 +76,8 @@ corn_subset.loc[corn_subset["education"].isna()] = corn_subset.loc[
 ].fillna("No educated")
 
 print(
-    "The main statistics for out clean dataset are: ", corn_subset.describe(include="all")
+    "The main statistics for out clean dataset are: ",
+    corn_subset.describe(include="all"),
 )
 
 
