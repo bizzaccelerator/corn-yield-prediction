@@ -19,7 +19,9 @@ from evidently.presets import RegressionPreset
 EVIDENTLY_SERVICE_URL = "https://evidently-ui-453290981886.us-central1.run.app"
 
 # Configuration option to force report generation even if reports exist
-FORCE_REPORT_GENERATION = os.getenv('FORCE_REPORT_GENERATION', 'false').lower() == 'true'
+FORCE_REPORT_GENERATION = (
+    os.getenv("FORCE_REPORT_GENERATION", "false").lower() == "true"
+)
 
 
 def check_project_has_reports(ws, project_id) -> tuple[bool, int]:
@@ -30,17 +32,17 @@ def check_project_has_reports(ws, project_id) -> tuple[bool, int]:
     try:
         # Convert UUID to string for file path operations
         project_id_str = str(project_id)
-        
+
         print(f"Checking for reports in project: {project_id_str}")
-        
+
         # Method 1: Check local workspace snapshots directory
         workspace_dir = os.path.join("workspace", project_id_str, "snapshots")
         print(f"Looking for snapshots in: {workspace_dir}")
-        
+
         if os.path.exists(workspace_dir):
             snapshot_files = glob.glob(os.path.join(workspace_dir, "*.json"))
             snapshot_count = len(snapshot_files)
-            
+
             if snapshot_count > 0:
                 print(f"Found {snapshot_count} report snapshots in local workspace")
                 return True, snapshot_count
@@ -48,29 +50,29 @@ def check_project_has_reports(ws, project_id) -> tuple[bool, int]:
                 print("Snapshot directory exists but no report files found")
         else:
             print("No local snapshot directory found")
-        
+
         # Method 2: Try to get runs from remote workspace
         try:
             # Try different methods to get runs from the workspace
-            if hasattr(ws, 'list_runs'):
+            if hasattr(ws, "list_runs"):
                 runs = ws.list_runs(project_id)
                 if runs:
                     run_count = len(runs)
                     print(f"Found {run_count} runs via workspace.list_runs()")
                     return True, run_count
-            
+
             # Try getting project first then runs
             project = ws.get_project(project_id)
-            if hasattr(project, 'list_runs'):
+            if hasattr(project, "list_runs"):
                 runs = project.list_runs()
                 if runs:
                     run_count = len(runs)
                     print(f"Found {run_count} runs via project.list_runs()")
                     return True, run_count
-        
+
         except Exception as api_error:
             print(f"Could not check remote runs: {api_error}")
-        
+
         # Method 3: Direct API call as fallback
         try:
             api_url = f"{EVIDENTLY_SERVICE_URL}/api/projects/{project_id_str}/reports"
@@ -79,17 +81,17 @@ def check_project_has_reports(ws, project_id) -> tuple[bool, int]:
                 data = response.json()
                 if isinstance(data, list):
                     report_count = len(data)
-                elif isinstance(data, dict) and 'items' in data:
-                    report_count = len(data['items'])
+                elif isinstance(data, dict) and "items" in data:
+                    report_count = len(data["items"])
                 else:
                     report_count = 0
-                
+
                 if report_count > 0:
                     print(f"Found {report_count} reports via direct API call")
                     return True, report_count
         except Exception as api_error:
             print(f"Direct API call failed: {api_error}")
-        
+
         print("No reports found by any method")
         return False, 0
 
@@ -138,7 +140,7 @@ def setup_regression_dashboard(project):
         ),
         tab="Model Performance",
     )
-    
+
     # Add individual metric panels
     project.dashboard.add_panel(
         DashboardPanelPlot(
@@ -172,7 +174,7 @@ def setup_regression_dashboard(project):
         ),
         tab="Model Performance",
     )
-    
+
     project.save()
 
 
@@ -200,12 +202,14 @@ try:
     project_name = "Corn Yield ML Monitoring"
     project_description = "Comprehensive ML monitoring for corn yield prediction model - performance and drift analysis"
 
-    project, is_new_project = get_or_create_project(ws, project_name, project_description)
+    project, is_new_project = get_or_create_project(
+        ws, project_name, project_description
+    )
 
     # Check if project already has reports (skip if reports exist, unless forced or new project)
     if not is_new_project and not FORCE_REPORT_GENERATION:
         has_reports, report_count = check_project_has_reports(ws, project.id)
-        
+
         if has_reports:
             print("\n" + "=" * 60)
             print("MONITORING TASK SKIPPED")
@@ -216,19 +220,21 @@ try:
                 print("To force report generation, set FORCE_REPORT_GENERATION=true")
             print(f"Dashboard URL: {EVIDENTLY_SERVICE_URL}/projects/{project.id}")
             print("=" * 60)
-            
+
             create_skip_metadata(
-                project.id, 
-                project_name, 
-                report_count, 
-                f"Project already has {report_count} existing reports"
+                project.id,
+                project_name,
+                report_count,
+                f"Project already has {report_count} existing reports",
             )
-            
+
             # Exit successfully without creating new reports
             exit(0)
     elif FORCE_REPORT_GENERATION:
-        print("🔄 FORCE_REPORT_GENERATION is enabled - proceeding with report generation")
-    
+        print(
+            "🔄 FORCE_REPORT_GENERATION is enabled - proceeding with report generation"
+        )
+
     print("Proceeding with report generation...")
 
 except Exception as e:
@@ -267,7 +273,9 @@ model = joblib.load("model.pkl")
 
 ### PREDICTIONS ###
 train_predictions = model.predict(X_encoded_train.values)
-val_predictions = model.predict(X_encoded_val.values) if X_encoded_val is not None else None
+val_predictions = (
+    model.predict(X_encoded_val.values) if X_encoded_val is not None else None
+)
 
 ### BUILD DATASETS ###
 reference_data = X_encoded_train.copy()
@@ -286,18 +294,24 @@ schema = DataDefinition(
 )
 
 eval_data_ref = Dataset.from_pandas(reference_data, data_definition=schema)
-eval_data_cur = Dataset.from_pandas(current_data, data_definition=schema) if current_data is not None else None
+eval_data_cur = (
+    Dataset.from_pandas(current_data, data_definition=schema)
+    if current_data is not None
+    else None
+)
 
 ### CREATE REPORT ###
 if is_new_project:
     setup_regression_dashboard(project)
 
-report = Report(metrics=[
-    MAE(column="prediction"), 
-    RMSE(column="prediction"), 
-    R2Score(column="prediction"),
-    MeanError(column="prediction")
-])
+report = Report(
+    metrics=[
+        MAE(column="prediction"),
+        RMSE(column="prediction"),
+        R2Score(column="prediction"),
+        MeanError(column="prediction"),
+    ]
+)
 
 if current_data is not None:
     report_result = report.run(current_data=eval_data_cur, reference_data=eval_data_ref)
