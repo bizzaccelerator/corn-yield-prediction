@@ -1,0 +1,235 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    name: Code Quality & Formatting
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install linting dependencies
+      run: |
+        pip install --upgrade pip
+        pip install black isort flake8 mypy bandit safety
+    
+    - name: Check code formatting with Black
+      run: |
+        black --check --diff .
+    
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff .
+    
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings. Line length compatible with Black
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+    
+    - name: Type checking with mypy
+      run: |
+        mypy . --ignore-missing-imports --no-strict-optional
+      continue-on-error: true  # Don't fail CI for type errors initially
+    
+    - name: Security check with bandit
+      run: |
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . --severity-level medium
+      continue-on-error: true
+    
+    - name: Check dependencies for security vulnerabilities
+      run: |
+        safety check
+      continue-on-error: true
+
+  test:
+    runs-on: ubuntu-latest
+    name: Run Tests
+    needs: lint-and-format
+    
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install pytest pytest-cov pytest-xdist
+        
+        # Install project dependencies
+        if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+        fi
+        if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+        fi
+        if [ -f setup.py ]; then
+            pip install -e .
+        fi
+    
+    - name: Run unit tests
+      run: |
+        pytest tests/ -v --cov=. --cov-report=xml --cov-report=html --cov-report=term
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+  build-and-test-docker:
+    runs-on: ubuntu-latest
+    name: Docker Build Test
+    needs: [test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check if Dockerfile exists
+      id: dockerfile-check
+      run: |
+        if [ -f Dockerfile ]; then
+            echo "dockerfile_exists=true" >> $GITHUB_OUTPUT
+        else
+            echo "dockerfile_exists=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Build Docker image
+      if: steps.dockerfile-check.outputs.dockerfile_exists == 'true'
+      run: |
+        docker build -t corn-yield-prediction:test .
+    
+    - name: Test Docker container
+      if: steps.dockerfile-check.outputs.dockerfile_exists == 'true'
+      run: |
+        # Basic container health check
+        docker run --rm corn-yield-prediction:test python -c "import sys; print('Python version:', sys.version)"
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Analysis
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install pip-audit
+      run: pip install pip-audit
+    
+    - name: Check for outdated dependencies
+      run: |
+        if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+            pip list --outdated
+        fi
+    
+    - name: Audit dependencies for vulnerabilities
+      run: |
+        if [ -f requirements.txt ]; then
+            pip-audit -r requirements.txt
+        fi
+      continue-on-error: true
+
+  notebook-tests:
+    runs-on: ubuntu-latest
+    name: Notebook Validation
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install notebook dependencies
+      run: |
+        pip install jupyter nbconvert nbformat
+        if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+        fi
+    
+    - name: Execute notebooks
+      run: |
+        # Find and execute all notebooks
+        find . -name "*.ipynb" -not -path "./.git/*" -not -path "./.*" | while read notebook; do
+            echo "Testing notebook: $notebook"
+            jupyter nbconvert --to notebook --execute --inplace "$notebook" || echo "❌ Failed: $notebook"
+        done
+      continue-on-error: true
+
+  pre-commit-hooks:
+    runs-on: ubuntu-latest
+    name: Pre-commit Hooks
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install pre-commit
+      run: pip install pre-commit
+    
+    - name: Run pre-commit on all files
+      run: |
+        if [ -f .pre-commit-config.yaml ]; then
+            pre-commit run --all-files
+        else
+            echo "No .pre-commit-config.yaml found, skipping pre-commit checks"
+        fi
+      continue-on-error: true
