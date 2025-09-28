@@ -164,11 +164,17 @@ try:
                         should_promote_to_prod = improvement > min_improvement
 
                         if should_promote_to_prod:
-                            print(f"Improvement {improvement*100:.2f}% > {min_improvement*100:.2f}% threshold")
+                            print(
+                                f"Improvement {improvement*100:.2f}% > {min_improvement*100:.2f}% threshold"
+                            )
                         else:
-                            print(f"Improvement {improvement*100:.2f}% < {min_improvement*100:.2f}% threshold")
+                            print(
+                                f"Improvement {improvement*100:.2f}% < {min_improvement*100:.2f}% threshold"
+                            )
                     else:
-                        print("No validation_rmse tag found in production model - promoting anyway")
+                        print(
+                            "No validation_rmse tag found in production model - promoting anyway"
+                        )
 
                 except Exception as e:
                     print(f"Warning: Could not parse production model tags: {e}")
@@ -204,11 +210,17 @@ try:
                 except Exception as e:
                     print(f"Warning: Could not add production promotion tags: {e}")
 
-                print(f"Model version {version_number} successfully promoted to Production!")
+                print(
+                    f"Model version {version_number} successfully promoted to Production!"
+                )
             else:
-                print(f"Model version {version_number} kept in Staging - insufficient improvement for Production")
+                print(
+                    f"Model version {version_number} kept in Staging - insufficient improvement for Production"
+                )
         else:
-            print(f"Model version {version_number} promoted to Staging (other models also in staging)")
+            print(
+                f"Model version {version_number} promoted to Staging (other models also in staging)"
+            )
 
     else:
         print("Model does not meet quality criteria")

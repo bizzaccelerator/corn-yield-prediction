@@ -454,8 +454,12 @@ elif model_selection == "gbr":
         print(
             f"Optimization completed. Best learning_rate: {best_gbr['learning_rate']}"
         )
-        print(f"Optimization completed. Best min_samples_split: {best_gbr['min_samples_split']}")
-        print(f"Optimization completed. Best min_samples_leaf: {best_gbr['min_samples_leaf']}")
+        print(
+            f"Optimization completed. Best min_samples_split: {best_gbr['min_samples_split']}"
+        )
+        print(
+            f"Optimization completed. Best min_samples_leaf: {best_gbr['min_samples_leaf']}"
+        )
 
         # Log the best parameters found
         mlflow.log_param("best_n_estimators", best_gbr["n_estimators"])
