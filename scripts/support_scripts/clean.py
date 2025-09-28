@@ -56,8 +56,7 @@ corn_subset.columns = [name.replace(" ", "_") for name in corn_subset.columns]
 # Those registries represent:
 missing_land = corn_subset["acreage"].isna().sum()
 amount_ml = (missing_land / corn.shape[0]) * 100
-print(f"The percentage of registries with missing values of cultivated land represent {
-    amount_ml}")
+print(f"The percentage of registries with missing values of cultivated land represent {amount_ml}")
 # While removing a large number of missing values is generally not
 # advisable, the lack of access to the research team for clarification and
 # the limited usefulness of this data for our model, these rows will be

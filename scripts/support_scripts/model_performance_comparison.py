@@ -135,8 +135,7 @@ def get_report_list_from_evidently(project_id: str) -> List[str]:
 
 def fetch_report_from_gcs(project_id: str, report_id: str) -> Optional[Dict]:
     """Download JSON snapshot from public GCS URL (or authenticated if bucket is private)."""
-    gcs_url = f"https://storage.googleapis.com/{
-        GCS_BUCKET_NAME}/{project_id}/snapshots/{report_id}.json"
+    gcs_url = f"https://storage.googleapis.com/{GCS_BUCKET_NAME}/{project_id}/snapshots/{report_id}.json"
     try:
         resp = requests.get(gcs_url, timeout=30)
         if resp.status_code == 200:

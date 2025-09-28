@@ -3,7 +3,6 @@ import os
 from datetime import datetime
 
 
-
 def load_run_info(file_path):
     """Load run information from JSON file"""
     try:
@@ -58,8 +57,7 @@ def compare_metrics(raw_metrics, optimized_metrics):
     if optimized_rmse < raw_rmse and rmse_improvement >= rmse_threshold:
         if optimized_r2 >= raw_r2 or r2_improvement >= r2_threshold:
             winner = "optimized"
-            reason = f"Lower RMSE ({
-                rmse_improvement:.2f}% improvement) with comparable/better R²"
+            reason = f"Lower RMSE ({rmse_improvement:.2f}% improvement) with comparable/better R²"
         else:
             # RMSE is better but R² is worse - need to decide
             if rmse_improvement > 5.0:  # Significant RMSE improvement

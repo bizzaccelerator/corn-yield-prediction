@@ -7,7 +7,6 @@ import pickle
 # To check the time between steps:
 import time
 
-
 # The first step involves importing the libraries required for the process:
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
