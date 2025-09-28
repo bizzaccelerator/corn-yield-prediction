@@ -152,11 +152,7 @@ X_train, X_val, y_train, y_val = train_test_split(
 )
 
 # The lenght of the datasets can be validated as:
-print(
-    f"The number of registries in the train dataset is {
-        len(X_train)}, in the validation dataset is {
-            len(X_val)}, and in the test dataset is {
-                len(X_test)}.")
+print(f"The number of registries in the train dataset is {len(X_train)}, in the validation dataset is {len(X_val)}, and in the test dataset is {len(X_test)}.")
 
 # Create output directory
 os.makedirs("data_splits", exist_ok=True)

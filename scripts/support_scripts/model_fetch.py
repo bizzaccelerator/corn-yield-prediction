@@ -81,8 +81,7 @@ else:
             should_deploy = True
             print(f"Candidate model shows {improvement*100:.2f}% improvement (threshold: {comparison_threshold *100:.2f}%)")
         else:
-            print(f"Candidate model improvement {
-                improvement * 100:.2f}% is below threshold {comparison_threshold * 100:.2f}%")
+            print(f"Candidate model improvement {improvement * 100:.2f}% is below threshold {comparison_threshold * 100:.2f}%")
 
 # --- Output decision ---
 decision = {

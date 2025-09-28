@@ -297,13 +297,7 @@ def extract_performance_metrics(report_data: Dict) -> Dict[str, Any]:
     results["drift_detected"] = drift_detected
 
     # Debug summary
-    print(
-        f"  Extracted for report {
-            results.get('report_id')}: rmse={
-            results.get('rmse')}, r2={
-                results.get('r2')}, mae={
-                    results.get('mae')}, drift={
-                        results.get('drift_detected')}")
+    print(f"  Extracted for report {results.get('report_id')}: rmse={results.get('rmse')}, r2={results.get('r2')}, mae={results.get('mae')}, drift={results.get('drift_detected')}")
     return results
 
 
