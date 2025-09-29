@@ -1,7 +1,7 @@
 import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.ensemble import GradientBoostingRegressor
-from support_scripts import train_linear, train_ridge, train_lasso, train_gbr
+from sklearn.linear_model import Lasso, LinearRegression, Ridge
+from support_scripts import train_gbr, train_lasso, train_linear, train_ridge
 
 
 def _synthetic_data():

@@ -1,4 +1,4 @@
-from support_scripts import model_performance_comparison, compare_models
+from support_scripts import compare_models, model_performance_comparison
 
 
 def test_model_performance_comparison():

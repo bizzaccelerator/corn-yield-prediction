@@ -1,5 +1,5 @@
 import pytest
-from support_scripts import model_registry, model_fetch
+from support_scripts import model_fetch, model_registry
 
 
 def test_register_and_fetch_model(tmp_path):
