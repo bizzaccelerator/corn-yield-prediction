@@ -24,4 +24,9 @@ nbformat>=5.7.0
 
 # Additional ML testing tools
 great-expectations>=0.17.0
-deepdiff>=6.0.0  # For comparing ML model outputs
+deepdiff>=6.0.0
+
+# ML dependencies (add these since your tests need them)
+scikit-learn>=1.0.0
+numpy>=1.21.0
+pandas>=1.3.0

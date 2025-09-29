@@ -112,7 +112,10 @@ jobs:
 
     - name: Run unit tests
       run: |
+        export PYTHONPATH="${PYTHONPATH}:${PWD}"
         pytest tests/ -v --cov=. --cov-report=xml --cov-report=html --cov-report=term
+      env:
+        PYTHONPATH: ${{ github.workspace }}
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
@@ -121,6 +124,7 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
+
   build-and-test-docker:
     runs-on: ubuntu-latest
     name: Docker Build Test
