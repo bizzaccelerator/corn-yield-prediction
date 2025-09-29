@@ -110,6 +110,14 @@ jobs:
             pip install -e .
         fi
 
+    - name: Create mock data files for testing
+      run: |
+        # Create a mock corn.csv file for testing
+        echo "year,production,area,yield" > corn.csv
+        echo "2020,100,50,2.0" >> corn.csv
+        echo "2021,110,52,2.1" >> corn.csv
+        echo "2022,105,51,2.06" >> corn.csv
+
     - name: Run unit tests
       run: |
         export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/scripts"
