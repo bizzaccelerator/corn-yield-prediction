@@ -1,6 +1,10 @@
 import pandas as pd
 import pytest
-from scripts.support_scripts import load_and_prepare_base_data, load_and_prepare_test_data
+
+from scripts.support_scripts import (
+    load_and_prepare_base_data,
+    load_and_prepare_test_data,
+)
 
 
 def test_base_loader_returns_dataframe():

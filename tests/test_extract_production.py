@@ -1,4 +1,5 @@
 import pytest
+
 from scripts.support_scripts import extract_production_model
 
 

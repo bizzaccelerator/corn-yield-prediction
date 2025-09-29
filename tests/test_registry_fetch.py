@@ -1,4 +1,5 @@
 import pytest
+
 from scripts.support_scripts import model_fetch, model_registry
 
 
