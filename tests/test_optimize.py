@@ -1,4 +1,4 @@
-from support_scripts import optimize
+from scripts.support_scripts import optimize
 
 
 def test_optimize_returns_params():

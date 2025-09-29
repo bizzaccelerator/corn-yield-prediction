@@ -1,5 +1,5 @@
 import pandas as pd
-from support_scripts import drift_monitoring
+from scripts.support_scripts import drift_monitoring
 
 
 def test_no_drift():

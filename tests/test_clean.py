@@ -1,6 +1,6 @@
 import pandas as pd
 import pytest
-from support_scripts import clean
+from scripts.support_scripts import clean
 
 
 def test_clean_handles_nulls():

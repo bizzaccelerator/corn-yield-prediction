@@ -1,5 +1,5 @@
 import pytest
-from support_scripts import extract_production_model
+from scripts.support_scripts import extract_production_model
 
 
 def test_extract_model(tmp_path):
