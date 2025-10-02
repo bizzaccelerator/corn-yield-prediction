@@ -80,6 +80,23 @@ def setup_test_environment():
     y_train_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, 60)})
     y_train_data.to_csv("y_train.csv", index=False)
 
+    # Create mock validation data CSVs
+    X_val_data = pd.DataFrame(
+        {
+            "Education": ["Secondary", "Primary", "Tertiary"] * 7,
+            "Gender": ["Male", "Female"] * 11,
+            "Age_bracket": ["26-35", "36-45", "46-55"] * 7,
+            "Household_size": np.random.randint(3, 8, 21),
+            "Acreage": np.random.uniform(1.5, 4.0, 21),
+            "Fertilizer_amount": np.random.randint(50, 150, 21),
+            "Laborers": np.random.randint(1, 6, 21),
+        }
+    )
+    X_val_data.to_csv("X_val.csv", index=False)
+
+    y_val_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, 21)})
+    y_val_data.to_csv("y_val.csv", index=False)
+
     # Create mock dict vectorizer using sklearn's actual class
     try:
         from sklearn.feature_extraction import DictVectorizer
@@ -94,17 +111,41 @@ def setup_test_environment():
         # Fallback if sklearn not available
         print("Warning: sklearn not available, using mock dict vectorizer")
 
-    # Create mock final_run_info.json
+    # Create mock final_run_info.json with all required keys
     final_run_info = {
         "run_id": "test_run_123456",
         "model_name": "test_model",
         "model_version": 1,
-        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
-        "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32},
+        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "mse": 0.25},
+        "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32, "mse": 0.27},
         "parameters": {"n_estimators": 100, "max_depth": 5},
+        "model_path": "models/test_model.pkl",
     }
     with open("final_run_info.json", "w") as f:
         json.dump(final_run_info, f)
+
+    # Create mock model_info.json for drift monitoring
+    model_info = {
+        "run_id": "test_run_123456",
+        "model_name": "GradientBoostingRegressor",
+        "model_version": 1,
+        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
+        "parameters": {"n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
+        "feature_names": [
+            "Education",
+            "Gender",
+            "Age_bracket",
+            "Household_size",
+            "Acreage",
+            "Fertilizer_amount",
+            "Laborers",
+            "Main_credit_source",
+            "Farm_records",
+            "Main_advisory_source",
+        ],
+    }
+    with open("model_info.json", "w") as f:
+        json.dump(model_info, f)
 
     # Setup Kaggle credentials
     kaggle_dir = Path.home() / ".config" / "kaggle"

@@ -158,6 +158,23 @@ jobs:
             'Yield': np.random.uniform(1000, 2000, 60)
         })
         y_train_data.to_csv('y_train.csv', index=False)
+        
+        # Create mock validation data CSVs
+        X_val_data = pd.DataFrame({
+            'Education': ['Secondary', 'Primary', 'Tertiary'] * 7,
+            'Gender': ['Male', 'Female'] * 11,
+            'Age_bracket': ['26-35', '36-45', '46-55'] * 7,
+            'Household_size': np.random.randint(3, 8, 21),
+            'Acreage': np.random.uniform(1.5, 4.0, 21),
+            'Fertilizer_amount': np.random.randint(50, 150, 21),
+            'Laborers': np.random.randint(1, 6, 21)
+        })
+        X_val_data.to_csv('X_val.csv', index=False)
+        
+        y_val_data = pd.DataFrame({
+            'Yield': np.random.uniform(1000, 2000, 21)
+        })
+        y_val_data.to_csv('y_val.csv', index=False)
 
         # Create real DictVectorizer (not mock class)
         dv = DictVectorizer()
