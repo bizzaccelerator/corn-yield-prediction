@@ -46,6 +46,40 @@ def setup_test_environment():
     y_train = np.random.rand(100)
     np.save("y.npy", y_train)
 
+    # Create mock feature names
+    feature_names = np.array(
+        [
+            "Education",
+            "Gender",
+            "Age_bracket",
+            "Household_size",
+            "Acreage",
+            "Fertilizer_amount",
+            "Laborers",
+            "Main_credit_source",
+            "Farm_records",
+            "Main_advisory_source",
+        ]
+    )
+    np.save("feature_names.npy", feature_names)
+
+    # Create mock training data CSVs
+    X_train_data = pd.DataFrame(
+        {
+            "Education": ["Secondary", "Primary", "Tertiary"] * 20,
+            "Gender": ["Male", "Female"] * 30,
+            "Age_bracket": ["26-35", "36-45", "46-55"] * 20,
+            "Household_size": np.random.randint(3, 8, 60),
+            "Acreage": np.random.uniform(1.5, 4.0, 60),
+            "Fertilizer_amount": np.random.randint(50, 150, 60),
+            "Laborers": np.random.randint(1, 6, 60),
+        }
+    )
+    X_train_data.to_csv("X_train.csv", index=False)
+
+    y_train_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, 60)})
+    y_train_data.to_csv("y_train.csv", index=False)
+
     # Create mock dict vectorizer using sklearn's actual class
     try:
         from sklearn.feature_extraction import DictVectorizer
@@ -66,6 +100,7 @@ def setup_test_environment():
         "model_name": "test_model",
         "model_version": 1,
         "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
+        "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32},
         "parameters": {"n_estimators": 100, "max_depth": 5},
     }
     with open("final_run_info.json", "w") as f:
