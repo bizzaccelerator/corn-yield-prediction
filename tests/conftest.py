@@ -38,11 +38,11 @@ def setup_test_environment():
     df = pd.DataFrame(corn_data)
     df.to_csv("corn.csv", index=False)
 
-    # Create mock encoded training data for drift monitoring
+    # Create mock encoded training data
     X_encoded_train = np.random.rand(100, 10)
     np.save("X_encoded.npy", X_encoded_train)
 
-    # Create mock target data for drift monitoring
+    # Create mock target data
     y_train = np.random.rand(100)
     np.save("y.npy", y_train)
 
@@ -63,16 +63,13 @@ def setup_test_environment():
     )
     np.save("feature_names.npy", feature_names)
 
-    # Create mock training data CSVs with NUMERIC DATA ONLY
-    # The scripts expect already-encoded numeric data
+    # Create mock training CSVs
     n_train = 60
     X_train_data = pd.DataFrame(
         {
-            "Education": np.random.choice(
-                [0, 1, 2], n_train
-            ),  # Encoded: 0=Primary, 1=Secondary, 2=Tertiary
-            "Gender": np.random.choice([0, 1], n_train),  # Encoded: 0=Female, 1=Male
-            "Age_bracket": np.random.choice([0, 1, 2], n_train),  # Encoded age ranges
+            "Education": np.random.choice([0, 1, 2], n_train),
+            "Gender": np.random.choice([0, 1], n_train),
+            "Age_bracket": np.random.choice([0, 1, 2], n_train),
             "Household_size": np.random.randint(3, 8, n_train),
             "Acreage": np.random.uniform(1.5, 4.0, n_train),
             "Fertilizer_amount": np.random.randint(50, 150, n_train),
@@ -84,7 +81,7 @@ def setup_test_environment():
     y_train_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_train)})
     y_train_data.to_csv("y_train.csv", index=False)
 
-    # Create mock validation data CSVs
+    # Create validation CSVs
     n_val = 20
     X_val_data = pd.DataFrame(
         {
@@ -102,7 +99,13 @@ def setup_test_environment():
     y_val_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_val)})
     y_val_data.to_csv("y_val.csv", index=False)
 
-    # Create mock test data CSVs
+    # 🔹 NEW: also save encoded validation sets for drift_monitoring
+    X_encoded_val = np.random.rand(n_val, 10)
+    np.save("X_encoded_val.npy", X_encoded_val)
+    y_val = np.random.rand(n_val)
+    np.save("y_val.npy", y_val)
+
+    # Create test CSVs
     n_test = 15
     X_test_data = pd.DataFrame(
         {
@@ -116,25 +119,18 @@ def setup_test_environment():
         }
     )
     X_test_data.to_csv("X_test.csv", index=False)
-
     y_test_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_test)})
     y_test_data.to_csv("y_test.csv", index=False)
 
-    # Create mock dict vectorizer using sklearn's actual class
-    try:
-        from sklearn.feature_extraction import DictVectorizer
+    # DictVectorizer
+    from sklearn.feature_extraction import DictVectorizer
 
-        dv = DictVectorizer()
-        # Fit with dummy data to initialize it
-        dummy_data = [{"feature_" + str(i): i for i in range(5)} for _ in range(10)]
-        dv.fit(dummy_data)
-        with open("dict_vectorizer", "wb") as f:
-            pickle.dump(dv, f)
-    except ImportError:
-        # Fallback if sklearn not available
-        print("Warning: sklearn not available, using mock dict vectorizer")
+    dv = DictVectorizer()
+    dv.fit([{"f0": 1, "f1": 2}])
+    with open("dict_vectorizer", "wb") as f:
+        pickle.dump(dv, f)
 
-    # Create mock final_run_info.json with all required keys
+    # final_run_info.json with metrics
     final_run_info = {
         "run_id": "test_run_123456",
         "model_name": "test_model",
@@ -147,101 +143,23 @@ def setup_test_environment():
     with open("final_run_info.json", "w") as f:
         json.dump(final_run_info, f)
 
-    # Create mock model_info.json for drift monitoring
+    # model_info.json
     model_info = {
         "run_id": "test_run_123456",
         "model_name": "GradientBoostingRegressor",
         "model_version": 1,
         "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
         "parameters": {"n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
-        "feature_names": [
-            "Education",
-            "Gender",
-            "Age_bracket",
-            "Household_size",
-            "Acreage",
-            "Fertilizer_amount",
-            "Laborers",
-            "Main_credit_source",
-            "Farm_records",
-            "Main_advisory_source",
-        ],
+        "feature_names": feature_names.tolist(),
     }
     with open("model_info.json", "w") as f:
         json.dump(model_info, f)
 
-    # Setup Kaggle credentials
+    # Kaggle credentials
     kaggle_dir = Path.home() / ".config" / "kaggle"
     kaggle_dir.mkdir(parents=True, exist_ok=True)
-    kaggle_json = kaggle_dir / "kaggle.json"
-    if not kaggle_json.exists():
-        with open(kaggle_json, "w") as f:
-            json.dump({"username": "test", "key": "test"}, f)
-        os.chmod(kaggle_json, 0o600)
+    with open(kaggle_dir / "kaggle.json", "w") as f:
+        json.dump({"username": "test", "key": "test"}, f)
+    os.chmod(kaggle_dir / "kaggle.json", 0o600)
 
     yield
-
-    # Cleanup (optional)
-    # You can add cleanup code here if needed
-
-
-@pytest.fixture
-def sample_dataframe():
-    """Provide a sample dataframe for testing."""
-    data = {
-        "Education": ["Secondary", "Primary", "Tertiary", "Secondary"],
-        "Gender": ["Male", "Female", "Male", "Female"],
-        "Age bracket": ["26-35", "36-45", "46-55", "26-35"],
-        "Household size": [5, 6, 4, 5],
-        "Acreage": [2.5, 3.0, 2.0, 2.8],
-        "Fertilizer amount": [100, 120, 80, 110],
-        "Laborers": [3, 4, 2, 3],
-        "Yield": [1500, 1600, 1400, 1550],
-        "Main credit source": ["Bank", "Cooperative", "Self", "Bank"],
-        "Farm records": ["Yes", "No", "Yes", "Yes"],
-        "Main advisory source": ["Extension", "Radio", "TV", "Extension"],
-        "Extension provider": ["Government", "NGO", "Private", "Government"],
-        "Advisory format": ["Group", "Individual", "Digital", "Group"],
-        "Advisory language": ["English", "Local", "English", "English"],
-    }
-    return pd.DataFrame(data)
-
-
-@pytest.fixture
-def sample_features():
-    """Provide sample feature data for model testing."""
-    return [
-        {
-            "Education": "Secondary",
-            "Gender": "Male",
-            "Age bracket": "26-35",
-            "Household size": 5,
-            "Acreage": 2.5,
-            "Fertilizer amount": 100,
-            "Laborers": 3,
-        }
-    ]
-
-
-@pytest.fixture
-def mock_model():
-    """Provide a mock model for testing."""
-
-    class MockModel:
-        def predict(self, X):
-            return np.array([1500.0] * len(X))
-
-        def fit(self, X, y):
-            return self
-
-        def score(self, X, y):
-            return 0.85
-
-    return MockModel()
-
-
-@pytest.fixture
-def temp_working_dir(tmp_path, monkeypatch):
-    """Create a temporary working directory for tests that need file isolation."""
-    monkeypatch.chdir(tmp_path)
-    return tmp_path
