@@ -97,7 +97,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install --upgrade pip
-        pip install pytest pytest-cov pytest-xdist
+        pip install pytest pytest-cov pytest-xdist hyperopt
 
         # Install project dependencies
         if [ -f requirements.txt ]; then
@@ -112,11 +112,49 @@ jobs:
 
     - name: Create mock data files for testing
       run: |
-        # Create a mock corn.csv file for testing
-        echo "year,production,area,yield" > corn.csv
-        echo "2020,100,50,2.0" >> corn.csv
-        echo "2021,110,52,2.1" >> corn.csv
-        echo "2022,105,51,2.06" >> corn.csv
+        # Create comprehensive mock corn.csv with all expected columns
+        cat > corn.csv << 'EOF'
+        Education,Gender,Age bracket,Household size,Acreage,Fertilizer amount,Laborers,Yield,Main credit source,Farm records,Main advisory source,Extension provider,Advisory format,Advisory language
+        Secondary,Male,26-35,5,2.5,100,3,1500,Bank,Yes,Extension,Government,Group,English
+        Primary,Female,36-45,6,3.0,120,4,1600,Cooperative,No,Radio,NGO,Individual,Local
+        Tertiary,Male,46-55,4,2.0,80,2,1400,Self,Yes,TV,Private,Digital,English
+        EOF
+
+        # Create mock numpy arrays for drift monitoring
+        python << 'PYTHON_EOF'
+        import numpy as np
+        import pickle
+
+        # Create mock encoded training data
+        X_encoded_train = np.random.rand(100, 10)
+        np.save("X_encoded.npy", X_encoded_train)
+
+        # Create mock dict vectorizer
+        class MockDictVectorizer:
+            def transform(self, X):
+                return np.random.rand(len(X), 10)
+            def get_feature_names_out(self):
+                return [f"feature_{i}" for i in range(10)]
+        
+        with open("dict_vectorizer", "wb") as f:
+            pickle.dump(MockDictVectorizer(), f)
+
+        # Create mock model registry info
+        import json
+        final_run_info = {
+            "run_id": "test_run_123",
+            "model_name": "test_model",
+            "metrics": {"rmse": 0.5, "r2": 0.8}
+        }
+        with open("final_run_info.json", "w") as f:
+            json.dump(final_run_info, f)
+        PYTHON_EOF
+
+    - name: Setup Kaggle credentials (mock)
+      run: |
+        mkdir -p ~/.config/kaggle
+        echo '{"username":"test","key":"test"}' > ~/.config/kaggle/kaggle.json
+        chmod 600 ~/.config/kaggle/kaggle.json
 
     - name: Run unit tests
       run: |
