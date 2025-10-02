@@ -143,36 +143,38 @@ jobs:
         np.save("feature_names.npy", feature_names)
 
         # Create mock training data CSVs
+        n_train = 60
         X_train_data = pd.DataFrame({
-            'Education': ['Secondary', 'Primary', 'Tertiary'] * 20,
-            'Gender': ['Male', 'Female'] * 30,
-            'Age_bracket': ['26-35', '36-45', '46-55'] * 20,
-            'Household_size': np.random.randint(3, 8, 60),
-            'Acreage': np.random.uniform(1.5, 4.0, 60),
-            'Fertilizer_amount': np.random.randint(50, 150, 60),
-            'Laborers': np.random.randint(1, 6, 60)
+            'Education': np.random.choice(['Secondary', 'Primary', 'Tertiary'], n_train),
+            'Gender': np.random.choice(['Male', 'Female'], n_train),
+            'Age_bracket': np.random.choice(['26-35', '36-45', '46-55'], n_train),
+            'Household_size': np.random.randint(3, 8, n_train),
+            'Acreage': np.random.uniform(1.5, 4.0, n_train),
+            'Fertilizer_amount': np.random.randint(50, 150, n_train),
+            'Laborers': np.random.randint(1, 6, n_train)
         })
         X_train_data.to_csv('X_train.csv', index=False)
         
         y_train_data = pd.DataFrame({
-            'Yield': np.random.uniform(1000, 2000, 60)
+            'Yield': np.random.uniform(1000, 2000, n_train)
         })
         y_train_data.to_csv('y_train.csv', index=False)
         
         # Create mock validation data CSVs
+        n_val = 20
         X_val_data = pd.DataFrame({
-            'Education': ['Secondary', 'Primary', 'Tertiary'] * 7,
-            'Gender': ['Male', 'Female'] * 11,
-            'Age_bracket': ['26-35', '36-45', '46-55'] * 7,
-            'Household_size': np.random.randint(3, 8, 21),
-            'Acreage': np.random.uniform(1.5, 4.0, 21),
-            'Fertilizer_amount': np.random.randint(50, 150, 21),
-            'Laborers': np.random.randint(1, 6, 21)
+            'Education': np.random.choice(['Secondary', 'Primary', 'Tertiary'], n_val),
+            'Gender': np.random.choice(['Male', 'Female'], n_val),
+            'Age_bracket': np.random.choice(['26-35', '36-45', '46-55'], n_val),
+            'Household_size': np.random.randint(3, 8, n_val),
+            'Acreage': np.random.uniform(1.5, 4.0, n_val),
+            'Fertilizer_amount': np.random.randint(50, 150, n_val),
+            'Laborers': np.random.randint(1, 6, n_val)
         })
         X_val_data.to_csv('X_val.csv', index=False)
         
         y_val_data = pd.DataFrame({
-            'Yield': np.random.uniform(1000, 2000, 21)
+            'Yield': np.random.uniform(1000, 2000, n_val)
         })
         y_val_data.to_csv('y_val.csv', index=False)
 
@@ -188,11 +190,30 @@ jobs:
         final_run_info = {
             "run_id": "test_run_123",
             "model_name": "test_model",
-            "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
-            "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32, "mse": 0.27}
+            "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "mse": 0.25},
+            "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32, "mse": 0.27},
+            "model_path": "models/test_model.pkl"
         }
         with open("final_run_info.json", "w") as f:
             json.dump(final_run_info, f)
+        
+        # Create mock model_info.json for drift monitoring
+        model_info = {
+            "run_id": "test_run_123456",
+            "model_name": "GradientBoostingRegressor",
+            "model_version": 1,
+            "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
+            "parameters": {
+                "n_estimators": 100,
+                "max_depth": 5,
+                "learning_rate": 0.1
+            },
+            "feature_names": ['Education', 'Gender', 'Age_bracket', 'Household_size', 
+                              'Acreage', 'Fertilizer_amount', 'Laborers', 'Main_credit_source',
+                              'Farm_records', 'Main_advisory_source']
+        }
+        with open("model_info.json", "w") as f:
+            json.dump(model_info, f)
         PYTHON_EOF
 
     - name: Setup Kaggle credentials (mock)

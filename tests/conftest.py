@@ -64,37 +64,41 @@ def setup_test_environment():
     np.save("feature_names.npy", feature_names)
 
     # Create mock training data CSVs
+    n_train = 60
     X_train_data = pd.DataFrame(
         {
-            "Education": ["Secondary", "Primary", "Tertiary"] * 20,
-            "Gender": ["Male", "Female"] * 30,
-            "Age_bracket": ["26-35", "36-45", "46-55"] * 20,
-            "Household_size": np.random.randint(3, 8, 60),
-            "Acreage": np.random.uniform(1.5, 4.0, 60),
-            "Fertilizer_amount": np.random.randint(50, 150, 60),
-            "Laborers": np.random.randint(1, 6, 60),
+            "Education": np.random.choice(
+                ["Secondary", "Primary", "Tertiary"], n_train
+            ),
+            "Gender": np.random.choice(["Male", "Female"], n_train),
+            "Age_bracket": np.random.choice(["26-35", "36-45", "46-55"], n_train),
+            "Household_size": np.random.randint(3, 8, n_train),
+            "Acreage": np.random.uniform(1.5, 4.0, n_train),
+            "Fertilizer_amount": np.random.randint(50, 150, n_train),
+            "Laborers": np.random.randint(1, 6, n_train),
         }
     )
     X_train_data.to_csv("X_train.csv", index=False)
 
-    y_train_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, 60)})
+    y_train_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_train)})
     y_train_data.to_csv("y_train.csv", index=False)
 
     # Create mock validation data CSVs
+    n_val = 20
     X_val_data = pd.DataFrame(
         {
-            "Education": ["Secondary", "Primary", "Tertiary"] * 7,
-            "Gender": ["Male", "Female"] * 11,
-            "Age_bracket": ["26-35", "36-45", "46-55"] * 7,
-            "Household_size": np.random.randint(3, 8, 21),
-            "Acreage": np.random.uniform(1.5, 4.0, 21),
-            "Fertilizer_amount": np.random.randint(50, 150, 21),
-            "Laborers": np.random.randint(1, 6, 21),
+            "Education": np.random.choice(["Secondary", "Primary", "Tertiary"], n_val),
+            "Gender": np.random.choice(["Male", "Female"], n_val),
+            "Age_bracket": np.random.choice(["26-35", "36-45", "46-55"], n_val),
+            "Household_size": np.random.randint(3, 8, n_val),
+            "Acreage": np.random.uniform(1.5, 4.0, n_val),
+            "Fertilizer_amount": np.random.randint(50, 150, n_val),
+            "Laborers": np.random.randint(1, 6, n_val),
         }
     )
     X_val_data.to_csv("X_val.csv", index=False)
 
-    y_val_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, 21)})
+    y_val_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_val)})
     y_val_data.to_csv("y_val.csv", index=False)
 
     # Create mock dict vectorizer using sklearn's actual class
