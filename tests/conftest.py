@@ -1,138 +1,57 @@
 import json
 import os
 import pickle
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
-
-# Add project root and scripts to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-sys.path.insert(0, str(project_root / "scripts"))
+from sklearn.linear_model import LinearRegression
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
-    """Setup test environment with all required mock files."""
+def setup_test_environment(tmp_path_factory):
+    """
+    Crea archivos y datos de prueba que los scripts esperan encontrar
+    para que pytest pueda importar y ejecutar sin errores.
+    """
+    tmp_dir = tmp_path_factory.mktemp("test_data")
+    os.chdir(tmp_dir)
 
-    # Create mock corn.csv with correct columns
-    corn_data = {
-        "Education": ["Secondary", "Primary", "Tertiary"],
-        "Gender": ["Male", "Female", "Male"],
-        "Age bracket": ["26-35", "36-45", "46-55"],
-        "Household size": [5, 6, 4],
-        "Acreage": [2.5, 3.0, 2.0],
-        "Fertilizer amount": [100, 120, 80],
-        "Laborers": [3, 4, 2],
-        "Yield": [1500, 1600, 1400],
-        "Main credit source": ["Bank", "Cooperative", "Self"],
-        "Farm records": ["Yes", "No", "Yes"],
-        "Main advisory source": ["Extension", "Radio", "TV"],
-        "Extension provider": ["Government", "NGO", "Private"],
-        "Advisory format": ["Group", "Individual", "Digital"],
-        "Advisory language": ["English", "Local", "English"],
-    }
-    df = pd.DataFrame(corn_data)
-    df.to_csv("corn.csv", index=False)
+    # ============================================================
+    # 1. Modelo de prueba
+    # ============================================================
+    model = LinearRegression()
+    X = np.random.rand(50, 10)
+    y = np.random.rand(50)
+    model.fit(X, y)
 
-    # Create mock encoded training data
-    X_encoded_train = np.random.rand(100, 10)
-    np.save("X_encoded.npy", X_encoded_train)
+    os.makedirs("models", exist_ok=True)
+    with open("models/test_model.pkl", "wb") as f:
+        pickle.dump(model, f)
 
-    # Create mock target data
-    y_train = np.random.rand(100)
-    np.save("y.npy", y_train)
+    # ============================================================
+    # 2. Datos de entrenamiento y validación
+    # ============================================================
+    n_train, n_val, n_features = 100, 20, 10
 
-    # Create mock feature names
-    feature_names = np.array(
-        [
-            "Education",
-            "Gender",
-            "Age_bracket",
-            "Household_size",
-            "Acreage",
-            "Fertilizer_amount",
-            "Laborers",
-            "Main_credit_source",
-            "Farm_records",
-            "Main_advisory_source",
-        ]
+    # Train
+    X_encoded_train = pd.DataFrame(
+        np.random.rand(n_train, n_features),
+        columns=[f"f{i}" for i in range(n_features)],
     )
-    np.save("feature_names.npy", feature_names)
+    X_encoded_train.to_csv("X_encoded_train.csv", index=False)
+    np.save("X_encoded_train.npy", X_encoded_train.values)
 
-    # Create mock training CSVs
-    n_train = 60
-    X_train_data = pd.DataFrame(
-        {
-            "Education": np.random.choice([0, 1, 2], n_train),
-            "Gender": np.random.choice([0, 1], n_train),
-            "Age_bracket": np.random.choice([0, 1, 2], n_train),
-            "Household_size": np.random.randint(3, 8, n_train),
-            "Acreage": np.random.uniform(1.5, 4.0, n_train),
-            "Fertilizer_amount": np.random.randint(50, 150, n_train),
-            "Laborers": np.random.randint(1, 6, n_train),
-        }
+    # Validation (CSV con columnas + npy con .values)
+    X_encoded_val = pd.DataFrame(
+        np.random.rand(n_val, n_features), columns=[f"f{i}" for i in range(n_features)]
     )
-    X_train_data.to_csv("X_train.csv", index=False)
+    X_encoded_val.to_csv("X_encoded_val.csv", index=False)
+    np.save("X_encoded_val.npy", X_encoded_val.values)
 
-    y_train_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_train)})
-    y_train_data.to_csv("y_train.csv", index=False)
-
-    # Create validation CSVs
-    n_val = 20
-    X_val_data = pd.DataFrame(
-        {
-            "Education": np.random.choice([0, 1, 2], n_val),
-            "Gender": np.random.choice([0, 1], n_val),
-            "Age_bracket": np.random.choice([0, 1, 2], n_val),
-            "Household_size": np.random.randint(3, 8, n_val),
-            "Acreage": np.random.uniform(1.5, 4.0, n_val),
-            "Fertilizer_amount": np.random.randint(50, 150, n_val),
-            "Laborers": np.random.randint(1, 6, n_val),
-        }
-    )
-    X_val_data.to_csv("X_val.csv", index=False)
-
-    y_val_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_val)})
-    y_val_data.to_csv("y_val.csv", index=False)
-
-    # 🔹 Save encoded validation sets (both npy and csv for compatibility)
-    X_encoded_val = np.random.rand(n_val, 10)
-    np.save("X_encoded_val.npy", X_encoded_val)
-    pd.DataFrame(X_encoded_val).to_csv("X_encoded_val.csv", index=False)
-
-    y_val = np.random.rand(n_val)
-    np.save("y_val.npy", y_val)
-
-    # Create test CSVs
-    n_test = 15
-    X_test_data = pd.DataFrame(
-        {
-            "Education": np.random.choice([0, 1, 2], n_test),
-            "Gender": np.random.choice([0, 1], n_test),
-            "Age_bracket": np.random.choice([0, 1, 2], n_test),
-            "Household_size": np.random.randint(3, 8, n_test),
-            "Acreage": np.random.uniform(1.5, 4.0, n_test),
-            "Fertilizer_amount": np.random.randint(50, 150, n_test),
-            "Laborers": np.random.randint(1, 6, n_test),
-        }
-    )
-    X_test_data.to_csv("X_test.csv", index=False)
-    y_test_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_test)})
-    y_test_data.to_csv("y_test.csv", index=False)
-
-    # DictVectorizer
-    from sklearn.feature_extraction import DictVectorizer
-
-    dv = DictVectorizer()
-    dv.fit([{"f0": 1, "f1": 2}])
-    with open("dict_vectorizer", "wb") as f:
-        pickle.dump(dv, f)
-
-    # final_run_info.json with metrics (both lowercase and uppercase keys)
+    # ============================================================
+    # 3. final_run_info.json con todos los formatos de métricas
+    # ============================================================
     final_run_info = {
         "run_id": "test_run_123456",
         "model_name": "test_model",
@@ -153,29 +72,50 @@ def setup_test_environment():
             "RMSE": 0.52,
             "R2": 0.78,
         },
+        # fallback keys at root level (para scripts estrictos)
+        "RMSE": 0.5,
+        "R2": 0.8,
+        "Val_RMSE": 0.52,
+        "Val_R2": 0.78,
         "parameters": {"n_estimators": 100, "max_depth": 5},
         "model_path": "models/test_model.pkl",
     }
+
     with open("final_run_info.json", "w") as f:
-        json.dump(final_run_info, f)
+        json.dump(final_run_info, f, indent=2)
 
-    # model_info.json
-    model_info = {
-        "run_id": "test_run_123456",
-        "model_name": "GradientBoostingRegressor",
-        "model_version": 1,
-        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "RMSE": 0.5, "R2": 0.8},
-        "parameters": {"n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
-        "feature_names": feature_names.tolist(),
+    # ============================================================
+    # 4. Producción ficticia (registro de modelo actual)
+    # ============================================================
+    prod_model_info = {
+        "run_id": "prod_run_0001",
+        "model_name": "test_model",
+        "model_version": 0,
+        "metrics": {"rmse": 0.6, "r2": 0.75},
+        "parameters": {"n_estimators": 50, "max_depth": 3},
+        "model_path": "models/prod_model.pkl",
     }
-    with open("model_info.json", "w") as f:
-        json.dump(model_info, f)
+    with open("production_model_info.json", "w") as f:
+        json.dump(prod_model_info, f, indent=2)
 
-    # Kaggle credentials
-    kaggle_dir = Path.home() / ".config" / "kaggle"
-    kaggle_dir.mkdir(parents=True, exist_ok=True)
-    with open(kaggle_dir / "kaggle.json", "w") as f:
-        json.dump({"username": "test", "key": "test"}, f)
-    os.chmod(kaggle_dir / "kaggle.json", 0o600)
+    with open("models/prod_model.pkl", "wb") as f:
+        pickle.dump(model, f)
+
+    # ============================================================
+    # 5. Fake data adicional (drift, test, etc.)
+    # ============================================================
+    pd.DataFrame(
+        np.random.rand(10, n_features), columns=[f"f{i}" for i in range(n_features)]
+    ).to_csv("drift_reference.csv", index=False)
+
+    pd.DataFrame(
+        np.random.rand(5, n_features), columns=[f"f{i}" for i in range(n_features)]
+    ).to_csv("drift_current.csv", index=False)
+
+    pd.DataFrame(
+        np.random.rand(20, n_features), columns=[f"f{i}" for i in range(n_features)]
+    ).to_csv("X_test.csv", index=False)
+
+    pd.Series(np.random.rand(20)).to_csv("y_test.csv", index=False)
 
     yield
