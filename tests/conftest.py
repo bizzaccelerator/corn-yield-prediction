@@ -99,9 +99,11 @@ def setup_test_environment():
     y_val_data = pd.DataFrame({"Yield": np.random.uniform(1000, 2000, n_val)})
     y_val_data.to_csv("y_val.csv", index=False)
 
-    # 🔹 NEW: also save encoded validation sets for drift_monitoring
+    # 🔹 Save encoded validation sets (both npy and csv for compatibility)
     X_encoded_val = np.random.rand(n_val, 10)
     np.save("X_encoded_val.npy", X_encoded_val)
+    pd.DataFrame(X_encoded_val).to_csv("X_encoded_val.csv", index=False)
+
     y_val = np.random.rand(n_val)
     np.save("y_val.npy", y_val)
 
@@ -130,13 +132,27 @@ def setup_test_environment():
     with open("dict_vectorizer", "wb") as f:
         pickle.dump(dv, f)
 
-    # final_run_info.json with metrics
+    # final_run_info.json with metrics (both lowercase and uppercase keys)
     final_run_info = {
         "run_id": "test_run_123456",
         "model_name": "test_model",
         "model_version": 1,
-        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "mse": 0.25},
-        "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32, "mse": 0.27},
+        "metrics": {
+            "rmse": 0.5,
+            "r2": 0.8,
+            "mae": 0.3,
+            "mse": 0.25,
+            "RMSE": 0.5,
+            "R2": 0.8,
+        },
+        "validation_metrics": {
+            "rmse": 0.52,
+            "r2": 0.78,
+            "mae": 0.32,
+            "mse": 0.27,
+            "RMSE": 0.52,
+            "R2": 0.78,
+        },
         "parameters": {"n_estimators": 100, "max_depth": 5},
         "model_path": "models/test_model.pkl",
     }
@@ -148,7 +164,7 @@ def setup_test_environment():
         "run_id": "test_run_123456",
         "model_name": "GradientBoostingRegressor",
         "model_version": 1,
-        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
+        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "RMSE": 0.5, "R2": 0.8},
         "parameters": {"n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
         "feature_names": feature_names.tolist(),
     }
