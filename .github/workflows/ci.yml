@@ -120,31 +120,35 @@ jobs:
         Tertiary,Male,46-55,4,2.0,80,2,1400,Self,Yes,TV,Private,Digital,English
         EOF
 
-        # Create mock numpy arrays for drift monitoring
+        # Create mock numpy arrays and pickle files
         python << 'PYTHON_EOF'
         import numpy as np
         import pickle
+        import json
+        from sklearn.feature_extraction import DictVectorizer
 
         # Create mock encoded training data
         X_encoded_train = np.random.rand(100, 10)
         np.save("X_encoded.npy", X_encoded_train)
 
-        # Create mock dict vectorizer
-        class MockDictVectorizer:
-            def transform(self, X):
-                return np.random.rand(len(X), 10)
-            def get_feature_names_out(self):
-                return [f"feature_{i}" for i in range(10)]
+        # Create mock target data
+        y_train = np.random.rand(100)
+        np.save("y.npy", y_train)
+
+        # Create real DictVectorizer (not mock class)
+        dv = DictVectorizer()
+        dummy_data = [{'feature_' + str(i): i for i in range(5)} for _ in range(10)]
+        dv.fit(dummy_data)
         
         with open("dict_vectorizer", "wb") as f:
-            pickle.dump(MockDictVectorizer(), f)
+            pickle.dump(dv, f)
 
-        # Create mock model registry info
-        import json
+        # Create mock model registry info with validation_metrics
         final_run_info = {
             "run_id": "test_run_123",
             "model_name": "test_model",
-            "metrics": {"rmse": 0.5, "r2": 0.8}
+            "metrics": {"rmse": 0.5, "r2": 0.8},
+            "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32}
         }
         with open("final_run_info.json", "w") as f:
             json.dump(final_run_info, f)
