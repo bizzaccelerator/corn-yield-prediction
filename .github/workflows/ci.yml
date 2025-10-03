@@ -217,11 +217,22 @@ jobs:
         prod_model.fit(X_encoded_train, y_train_array)
         joblib.dump(prod_model, "models/prod_model.pkl")
 
-        # ===== JSON CONFIGS =====
+        # ===== JSON CONFIGS - EXHAUSTIVE COVERAGE =====
+        # Create the most comprehensive JSON possible to catch any access pattern
         final_run_info = {
             "run_id": "test_run_123456",
             "model_name": "test_model",
             "model_version": 1,
+            # All metrics at root level (first check location)
+            "rmse": 0.5,
+            "r2": 0.8,
+            "mae": 0.3,
+            "mse": 0.25,
+            "RMSE": 0.5,
+            "R2": 0.8,
+            "MAE": 0.3,
+            "MSE": 0.25,
+            # Nested in "metrics" dict
             "metrics": {
                 "rmse": 0.5,
                 "r2": 0.8,
@@ -232,6 +243,7 @@ jobs:
                 "MAE": 0.3,
                 "MSE": 0.25
             },
+            # Nested in "validation_metrics" dict
             "validation_metrics": {
                 "rmse": 0.52,
                 "r2": 0.78,
@@ -242,28 +254,44 @@ jobs:
                 "MAE": 0.32,
                 "MSE": 0.27
             },
-            "rmse": 0.5,
-            "r2": 0.8,
-            "mae": 0.3,
-            "mse": 0.25,
-            "RMSE": 0.5,
-            "R2": 0.8,
-            "MAE": 0.3,
-            "MSE": 0.25,
+            # Validation at root with prefixes
             "val_rmse": 0.52,
             "val_r2": 0.78,
+            "val_mae": 0.32,
+            "val_mse": 0.27,
             "Val_RMSE": 0.52,
             "Val_R2": 0.78,
             "Val_MAE": 0.32,
             "Val_MSE": 0.27,
+            "validation_rmse": 0.52,
+            "validation_r2": 0.78,
+            # Other common patterns
+            "test_rmse": 0.52,
+            "test_r2": 0.78,
             "parameters": {
                 "n_estimators": 100,
                 "max_depth": 5
             },
             "model_path": "models/test_model.pkl"
         }
+
+        # Write and verify
         with open("final_run_info.json", "w") as f:
             json.dump(final_run_info, f, indent=2)
+
+        # VERIFICATION - Print what we created
+        print("\n=== VERIFICATION: final_run_info.json contents ===")
+        with open("final_run_info.json", "r") as f:
+            loaded = json.load(f)
+            print(f"Root level keys: {list(loaded.keys())}")
+            print(f"RMSE at root: {loaded.get('RMSE')}")
+            print(f"rmse at root: {loaded.get('rmse')}")
+            print(f"R2 at root: {loaded.get('R2')}")
+            print(f"r2 at root: {loaded.get('r2')}")
+            if 'validation_metrics' in loaded:
+                print(f"validation_metrics keys: {list(loaded['validation_metrics'].keys())}")
+                print(f"validation_metrics.RMSE: {loaded['validation_metrics'].get('RMSE')}")
+                print(f"validation_metrics.rmse: {loaded['validation_metrics'].get('rmse')}")
 
         model_info = {
             "run_id": "test_run_123456",
@@ -284,10 +312,12 @@ jobs:
             "run_id": "prod_run_0001",
             "model_name": "test_model",
             "model_version": 0,
-            "metrics": {"rmse": 0.6, "r2": 0.75, "RMSE": 0.6, "R2": 0.75, "mae": 0.35, "MAE": 0.35},
-            "validation_metrics": {"rmse": 0.62, "r2": 0.73, "RMSE": 0.62, "R2": 0.73},
+            "rmse": 0.6,
+            "r2": 0.75,
             "RMSE": 0.6,
             "R2": 0.75,
+            "metrics": {"rmse": 0.6, "r2": 0.75, "RMSE": 0.6, "R2": 0.75, "mae": 0.35, "MAE": 0.35},
+            "validation_metrics": {"rmse": 0.62, "r2": 0.73, "RMSE": 0.62, "R2": 0.73},
             "parameters": {"n_estimators": 50, "max_depth": 3},
             "model_path": "models/prod_model.pkl"
         }
