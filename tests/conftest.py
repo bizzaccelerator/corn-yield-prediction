@@ -1,3 +1,5 @@
+"""Pytest configuration and fixtures for test suite."""
+
 import json
 import os
 import pickle
@@ -35,6 +37,9 @@ def setup_test_environment():
 
     y_train_array = np.random.uniform(1000, 2000, n_train)
     np.save("y.npy", y_train_array)
+
+    y_val_array = np.random.uniform(1000, 2000, n_val)
+    np.save("target_val.npy", y_val_array)
 
     # ===== FEATURE NAMES =====
     feature_names = np.array(
@@ -214,6 +219,16 @@ def setup_test_environment():
         os.chmod(kaggle_json, 0o600)
 
     yield
+
+    # Cleanup (optional - comment out if you want to inspect files after tests)
+    # import shutil
+    # for f in ["corn.csv", "X_train.csv", "y_train.csv", "X_val.csv", "y_val.csv",
+    #           "X_test.csv", "y_test.csv", "model.pkl", "dict_vectorizer",
+    #           "final_run_info.json", "model_info.json", "production_model_info.json"]:
+    #     if os.path.exists(f):
+    #         os.remove(f)
+    # if os.path.exists("models"):
+    #     shutil.rmtree("models")
 
 
 @pytest.fixture

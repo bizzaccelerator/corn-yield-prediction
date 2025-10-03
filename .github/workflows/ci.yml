@@ -148,6 +148,9 @@ jobs:
         y_train_array = np.random.uniform(1000, 2000, n_train)
         np.save("y.npy", y_train_array)
 
+        y_val_array = np.random.uniform(1000, 2000, n_val)
+        np.save("target_val.npy", y_val_array)
+
         # ===== FEATURE NAMES =====
         feature_names = np.array(['Education', 'Gender', 'Age_bracket', 'Household_size', 
                                   'Acreage', 'Fertilizer_amount', 'Laborers', 'Main_credit_source',
