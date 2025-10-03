@@ -120,141 +120,141 @@ jobs:
         EOF
 
         python << 'PYTHON_EOF'
-import numpy as np
-import pandas as pd
-import pickle
-import json
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.ensemble import GradientBoostingRegressor
-from sklearn.linear_model import LinearRegression
-import joblib
-import os
+        import numpy as np
+        import pandas as pd
+        import pickle
+        import json
+        from sklearn.feature_extraction import DictVectorizer
+        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn.linear_model import LinearRegression
+        import joblib
+        import os
 
-# Create models directory
-os.makedirs("models", exist_ok=True)
+        # Create models directory
+        os.makedirs("models", exist_ok=True)
 
-# Training/validation/test dimensions
-n_train, n_val, n_test = 60, 20, 15
-n_features = 10
+        # Training/validation/test dimensions
+        n_train, n_val, n_test = 60, 20, 15
+        n_features = 10
 
-# ===== ENCODED DATA (numpy arrays) =====
-X_encoded_train = np.random.rand(n_train, n_features)
-np.save("X_encoded.npy", X_encoded_train)
-np.save("X_encoded_train.npy", X_encoded_train)
+        # ===== ENCODED DATA (numpy arrays) =====
+        X_encoded_train = np.random.rand(n_train, n_features)
+        np.save("X_encoded.npy", X_encoded_train)
+        np.save("X_encoded_train.npy", X_encoded_train)
 
-X_encoded_val = np.random.rand(n_val, n_features)
-np.save("X_encoded_val.npy", X_encoded_val)
+        X_encoded_val = np.random.rand(n_val, n_features)
+        np.save("X_encoded_val.npy", X_encoded_val)
 
-y_train_array = np.random.uniform(1000, 2000, n_train)
-np.save("y.npy", y_train_array)
+        y_train_array = np.random.uniform(1000, 2000, n_train)
+        np.save("y.npy", y_train_array)
 
-# ===== FEATURE NAMES =====
-feature_names = np.array(['Education', 'Gender', 'Age_bracket', 'Household_size', 
-                          'Acreage', 'Fertilizer_amount', 'Laborers', 'Main_credit_source',
-                          'Farm_records', 'Main_advisory_source'])
-np.save("feature_names.npy", feature_names)
+        # ===== FEATURE NAMES =====
+        feature_names = np.array(['Education', 'Gender', 'Age_bracket', 'Household_size', 
+                                  'Acreage', 'Fertilizer_amount', 'Laborers', 'Main_credit_source',
+                                  'Farm_records', 'Main_advisory_source'])
+        np.save("feature_names.npy", feature_names)
 
-# ===== CSV DATA (numeric only for sklearn) =====
-X_train_df = pd.DataFrame({
-    'Education': np.random.choice([0, 1, 2], n_train),
-    'Gender': np.random.choice([0, 1], n_train),
-    'Age_bracket': np.random.choice([0, 1, 2], n_train),
-    'Household_size': np.random.randint(3, 8, n_train),
-    'Acreage': np.random.uniform(1.5, 4.0, n_train),
-    'Fertilizer_amount': np.random.randint(50, 150, n_train),
-    'Laborers': np.random.randint(1, 6, n_train)
-})
-X_train_df.to_csv('X_train.csv', index=False)
+        # ===== CSV DATA (numeric only for sklearn) =====
+        X_train_df = pd.DataFrame({
+            'Education': np.random.choice([0, 1, 2], n_train),
+            'Gender': np.random.choice([0, 1], n_train),
+            'Age_bracket': np.random.choice([0, 1, 2], n_train),
+            'Household_size': np.random.randint(3, 8, n_train),
+            'Acreage': np.random.uniform(1.5, 4.0, n_train),
+            'Fertilizer_amount': np.random.randint(50, 150, n_train),
+            'Laborers': np.random.randint(1, 6, n_train)
+        })
+        X_train_df.to_csv('X_train.csv', index=False)
 
-y_train_df = pd.DataFrame({'Yield': y_train_array})
-y_train_df.to_csv('y_train.csv', index=False)
+        y_train_df = pd.DataFrame({'Yield': y_train_array})
+        y_train_df.to_csv('y_train.csv', index=False)
 
-X_val_df = pd.DataFrame({
-    'Education': np.random.choice([0, 1, 2], n_val),
-    'Gender': np.random.choice([0, 1], n_val),
-    'Age_bracket': np.random.choice([0, 1, 2], n_val),
-    'Household_size': np.random.randint(3, 8, n_val),
-    'Acreage': np.random.uniform(1.5, 4.0, n_val),
-    'Fertilizer_amount': np.random.randint(50, 150, n_val),
-    'Laborers': np.random.randint(1, 6, n_val)
-})
-X_val_df.to_csv('X_val.csv', index=False)
+        X_val_df = pd.DataFrame({
+            'Education': np.random.choice([0, 1, 2], n_val),
+            'Gender': np.random.choice([0, 1], n_val),
+            'Age_bracket': np.random.choice([0, 1, 2], n_val),
+            'Household_size': np.random.randint(3, 8, n_val),
+            'Acreage': np.random.uniform(1.5, 4.0, n_val),
+            'Fertilizer_amount': np.random.randint(50, 150, n_val),
+            'Laborers': np.random.randint(1, 6, n_val)
+        })
+        X_val_df.to_csv('X_val.csv', index=False)
 
-y_val_df = pd.DataFrame({'Yield': np.random.uniform(1000, 2000, n_val)})
-y_val_df.to_csv('y_val.csv', index=False)
+        y_val_df = pd.DataFrame({'Yield': np.random.uniform(1000, 2000, n_val)})
+        y_val_df.to_csv('y_val.csv', index=False)
 
-X_test_df = pd.DataFrame({
-    'Education': np.random.choice([0, 1, 2], n_test),
-    'Gender': np.random.choice([0, 1], n_test),
-    'Age_bracket': np.random.choice([0, 1, 2], n_test),
-    'Household_size': np.random.randint(3, 8, n_test),
-    'Acreage': np.random.uniform(1.5, 4.0, n_test),
-    'Fertilizer_amount': np.random.randint(50, 150, n_test),
-    'Laborers': np.random.randint(1, 6, n_test)
-})
-X_test_df.to_csv('X_test.csv', index=False)
+        X_test_df = pd.DataFrame({
+            'Education': np.random.choice([0, 1, 2], n_test),
+            'Gender': np.random.choice([0, 1], n_test),
+            'Age_bracket': np.random.choice([0, 1, 2], n_test),
+            'Household_size': np.random.randint(3, 8, n_test),
+            'Acreage': np.random.uniform(1.5, 4.0, n_test),
+            'Fertilizer_amount': np.random.randint(50, 150, n_test),
+            'Laborers': np.random.randint(1, 6, n_test)
+        })
+        X_test_df.to_csv('X_test.csv', index=False)
 
-y_test_df = pd.DataFrame({'Yield': np.random.uniform(1000, 2000, n_test)})
-y_test_df.to_csv('y_test.csv', index=False)
+        y_test_df = pd.DataFrame({'Yield': np.random.uniform(1000, 2000, n_test)})
+        y_test_df.to_csv('y_test.csv', index=False)
 
-# ===== DICT VECTORIZER =====
-dv = DictVectorizer()
-dummy_data = [{'feature_' + str(i): i for i in range(5)} for _ in range(10)]
-dv.fit(dummy_data)
-with open("dict_vectorizer", "wb") as f:
-    pickle.dump(dv, f)
+        # ===== DICT VECTORIZER =====
+        dv = DictVectorizer()
+        dummy_data = [{'feature_' + str(i): i for i in range(5)} for _ in range(10)]
+        dv.fit(dummy_data)
+        with open("dict_vectorizer", "wb") as f:
+            pickle.dump(dv, f)
 
-# ===== TRAINED MODELS =====
-mock_model = GradientBoostingRegressor(n_estimators=10, random_state=42)
-mock_model.fit(X_encoded_train, y_train_array)
-joblib.dump(mock_model, "model.pkl")
-joblib.dump(mock_model, "models/test_model.pkl")
+        # ===== TRAINED MODELS =====
+        mock_model = GradientBoostingRegressor(n_estimators=10, random_state=42)
+        mock_model.fit(X_encoded_train, y_train_array)
+        joblib.dump(mock_model, "model.pkl")
+        joblib.dump(mock_model, "models/test_model.pkl")
 
-prod_model = LinearRegression()
-prod_model.fit(X_encoded_train, y_train_array)
-joblib.dump(prod_model, "models/prod_model.pkl")
+        prod_model = LinearRegression()
+        prod_model.fit(X_encoded_train, y_train_array)
+        joblib.dump(prod_model, "models/prod_model.pkl")
 
-# ===== JSON CONFIGS =====
-final_run_info = {
-    "run_id": "test_run_123456",
-    "model_name": "test_model",
-    "model_version": 1,
-    "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "mse": 0.25, "RMSE": 0.5, "R2": 0.8},
-    "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32, "mse": 0.27, "RMSE": 0.52, "R2": 0.78},
-    "RMSE": 0.5,
-    "R2": 0.8,
-    "Val_RMSE": 0.52,
-    "Val_R2": 0.78,
-    "parameters": {"n_estimators": 100, "max_depth": 5},
-    "model_path": "models/test_model.pkl"
-}
-with open("final_run_info.json", "w") as f:
-    json.dump(final_run_info, f, indent=2)
+        # ===== JSON CONFIGS =====
+        final_run_info = {
+            "run_id": "test_run_123456",
+            "model_name": "test_model",
+            "model_version": 1,
+            "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "mse": 0.25, "RMSE": 0.5, "R2": 0.8},
+            "validation_metrics": {"rmse": 0.52, "r2": 0.78, "mae": 0.32, "mse": 0.27, "RMSE": 0.52, "R2": 0.78},
+            "RMSE": 0.5,
+            "R2": 0.8,
+            "Val_RMSE": 0.52,
+            "Val_R2": 0.78,
+            "parameters": {"n_estimators": 100, "max_depth": 5},
+            "model_path": "models/test_model.pkl"
+        }
+        with open("final_run_info.json", "w") as f:
+            json.dump(final_run_info, f, indent=2)
 
-model_info = {
-    "run_id": "test_run_123456",
-    "model_name": "GradientBoostingRegressor",
-    "model_version": 1,
-    "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
-    "parameters": {"n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
-    "feature_names": feature_names.tolist()
-}
-with open("model_info.json", "w") as f:
-    json.dump(model_info, f, indent=2)
+        model_info = {
+            "run_id": "test_run_123456",
+            "model_name": "GradientBoostingRegressor",
+            "model_version": 1,
+            "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
+            "parameters": {"n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
+            "feature_names": feature_names.tolist()
+        }
+        with open("model_info.json", "w") as f:
+            json.dump(model_info, f, indent=2)
 
-production_model_info = {
-    "run_id": "prod_run_0001",
-    "model_name": "test_model",
-    "model_version": 0,
-    "metrics": {"rmse": 0.6, "r2": 0.75, "RMSE": 0.6, "R2": 0.75},
-    "parameters": {"n_estimators": 50, "max_depth": 3},
-    "model_path": "models/prod_model.pkl"
-}
-with open("production_model_info.json", "w") as f:
-    json.dump(production_model_info, f, indent=2)
+        production_model_info = {
+            "run_id": "prod_run_0001",
+            "model_name": "test_model",
+            "model_version": 0,
+            "metrics": {"rmse": 0.6, "r2": 0.75, "RMSE": 0.6, "R2": 0.75},
+            "parameters": {"n_estimators": 50, "max_depth": 3},
+            "model_path": "models/prod_model.pkl"
+        }
+        with open("production_model_info.json", "w") as f:
+            json.dump(production_model_info, f, indent=2)
 
-print("✓ All mock data files created successfully")
-PYTHON_EOF
+        print("✓ All mock data files created successfully")
+        PYTHON_EOF
 
     - name: Setup Kaggle credentials (mock)
       run: |
