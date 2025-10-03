@@ -15,7 +15,7 @@ bandit>=1.7.5
 safety>=2.3.0
 pip-audit>=2.4.0
 
-# Machine learning dependencies (if not in main requirements.txt)
+# Machine learning dependencies
 scikit-learn>=1.2.0
 numpy>=1.23.0
 pandas>=1.5.0

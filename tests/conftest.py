@@ -167,6 +167,8 @@ def setup_test_environment():
             "mse": 0.25,
             "RMSE": 0.5,
             "R2": 0.8,
+            "MAE": 0.3,
+            "MSE": 0.25,
         },
         "validation_metrics": {
             "rmse": 0.52,
@@ -175,12 +177,23 @@ def setup_test_environment():
             "mse": 0.27,
             "RMSE": 0.52,
             "R2": 0.78,
+            "MAE": 0.32,
+            "MSE": 0.27,
         },
-        # Fallback keys at root level
+        "rmse": 0.5,
+        "r2": 0.8,
+        "mae": 0.3,
+        "mse": 0.25,
         "RMSE": 0.5,
         "R2": 0.8,
+        "MAE": 0.3,
+        "MSE": 0.25,
+        "val_rmse": 0.52,
+        "val_r2": 0.78,
         "Val_RMSE": 0.52,
         "Val_R2": 0.78,
+        "Val_MAE": 0.32,
+        "Val_MSE": 0.27,
         "parameters": {"n_estimators": 100, "max_depth": 5},
         "model_path": "models/test_model.pkl",
     }
@@ -191,7 +204,7 @@ def setup_test_environment():
         "run_id": "test_run_123456",
         "model_name": "GradientBoostingRegressor",
         "model_version": 1,
-        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3},
+        "metrics": {"rmse": 0.5, "r2": 0.8, "mae": 0.3, "RMSE": 0.5, "R2": 0.8},
         "parameters": {"n_estimators": 100, "max_depth": 5, "learning_rate": 0.1},
         "feature_names": feature_names.tolist(),
     }
@@ -202,7 +215,17 @@ def setup_test_environment():
         "run_id": "prod_run_0001",
         "model_name": "test_model",
         "model_version": 0,
-        "metrics": {"rmse": 0.6, "r2": 0.75, "RMSE": 0.6, "R2": 0.75},
+        "metrics": {
+            "rmse": 0.6,
+            "r2": 0.75,
+            "RMSE": 0.6,
+            "R2": 0.75,
+            "mae": 0.35,
+            "MAE": 0.35,
+        },
+        "validation_metrics": {"rmse": 0.62, "r2": 0.73, "RMSE": 0.62, "R2": 0.73},
+        "RMSE": 0.6,
+        "R2": 0.75,
         "parameters": {"n_estimators": 50, "max_depth": 3},
         "model_path": "models/prod_model.pkl",
     }
@@ -219,16 +242,6 @@ def setup_test_environment():
         os.chmod(kaggle_json, 0o600)
 
     yield
-
-    # Cleanup (optional - comment out if you want to inspect files after tests)
-    # import shutil
-    # for f in ["corn.csv", "X_train.csv", "y_train.csv", "X_val.csv", "y_val.csv",
-    #           "X_test.csv", "y_test.csv", "model.pkl", "dict_vectorizer",
-    #           "final_run_info.json", "model_info.json", "production_model_info.json"]:
-    #     if os.path.exists(f):
-    #         os.remove(f)
-    # if os.path.exists("models"):
-    #     shutil.rmtree("models")
 
 
 @pytest.fixture
@@ -290,6 +303,6 @@ def mock_model():
 
 @pytest.fixture
 def temp_working_dir(tmp_path, monkeypatch):
-    """Create a temporary working directory for tests that need file isolation."""
+    """Create a temporary working directory for tests that need file isolation"""
     monkeypatch.chdir(tmp_path)
     return tmp_path
