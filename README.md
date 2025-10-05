@@ -88,6 +88,19 @@ Photo: Diagram of the prediction service disposed.
 - Automation & Reliability: Kestra orchestrates end-to-end workflows, reducing manual intervention and ensuring repeatable, reliable execution.
 - Governance & Maintenance: Dedicated GCS storage separates artifacts and reports, supporting strong governance and easier long-term management.
 
+### _Best Practices:_
+
+This project follows essential software development best practices to ensure code reliability, maintainability, and seamless collaboration throughout the MLOps lifecycle.
+
+- __Unit Tests:__
+Unit tests were implemented to validate the correctness of individual components in isolation. This approach helps identify issues early in development, ensuring that each function behaves as expected before integration.
+- __Linter and Code Formatter:__
+Code linting and formatting tools are applied to maintain a consistent and readable codebase. Enforcing these standards reduces human error, improves code clarity, and simplifies collaboration among team members.
+- __Pre-commit Hooks:__
+Pre-commit hooks automatically check code quality and formatting before changes are committed to the repository. This proactive mechanism prevents poorly formatted or untested code from entering the main branch, reinforcing overall project stability.
+- __CI/CD Pipeline:__
+A Continuous Integration and Continuous Deployment (CI/CD) pipeline automates testing, building, and deployment processes. This ensures that updates are delivered reliably, with minimal manual intervention, and that the project remains in a deployable state at all times.
+
 ## How to run the project.
 
 Check out the project [wiki](https://github.com/bizzaccelerator/corn-yield-prediction/wiki) for more details about this repository and step-by-step instructions to reproduce the solution.
