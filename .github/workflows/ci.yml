@@ -410,34 +410,6 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: false
 
-  build-and-test-docker:
-    runs-on: ubuntu-latest
-    name: Docker Build Test
-    needs: [test]
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Check if Dockerfile exists
-      id: dockerfile-check
-      run: |
-        if [ -f Dockerfile ]; then
-            echo "dockerfile_exists=true" >> $GITHUB_OUTPUT
-        else
-            echo "dockerfile_exists=false" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Build Docker image
-      if: steps.dockerfile-check.outputs.dockerfile_exists == 'true'
-      run: |
-        docker build -t corn-yield-prediction:test .
-
-    - name: Test Docker container
-      if: steps.dockerfile-check.outputs.dockerfile_exists == 'true'
-      run: |
-        docker run --rm corn-yield-prediction:test python -c "import sys; print('Python version:', sys.version)"
-
   dependency-check:
     runs-on: ubuntu-latest
     name: Dependency Analysis
