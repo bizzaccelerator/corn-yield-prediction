@@ -332,6 +332,68 @@ jobs:
         mkdir -p ~/.config/kaggle
         echo '{"username":"test","key":"test"}' > ~/.config/kaggle/kaggle.json
         chmod 600 ~/.config/kaggle/kaggle.json
+    
+    - name: Validate and debug mock data
+      run: |
+        python << 'PYTHON_EOF'
+        import json
+        import sys
+
+        # Load and inspect the JSON
+        try:
+            with open("final_run_info.json", "r") as f:
+                data = json.load(f)
+            
+            print("=" * 60)
+            print("FINAL_RUN_INFO.JSON CONTENTS:")
+            print("=" * 60)
+            print(json.dumps(data, indent=2))
+            print("\n" + "=" * 60)
+            print("DIAGNOSTIC CHECKS:")
+            print("=" * 60)
+            
+            # Check all possible access patterns
+            checks = [
+                ("data['validation_metrics']['rmse']", lambda: data['validation_metrics']['rmse']),
+                ("data['validation_metrics']['RMSE']", lambda: data['validation_metrics']['RMSE']),
+                ("data['validation_metrics'].get('rmse')", lambda: data['validation_metrics'].get('rmse')),
+                ("data.get('validation_metrics', {}).get('rmse')", lambda: data.get('validation_metrics', {}).get('rmse')),
+                ("data['RMSE']", lambda: data['RMSE']),
+                ("data['rmse']", lambda: data['rmse']),
+                ("data.get('RMSE')", lambda: data.get('RMSE')),
+            ]
+            
+            for desc, func in checks:
+                try:
+                    result = func()
+                    print(f"✓ {desc} = {result}")
+                except Exception as e:
+                    print(f"✗ {desc} = ERROR: {e}")
+            
+            # Verify non-None values
+            issues = []
+            if data.get('validation_metrics', {}).get('rmse') is None:
+                issues.append("validation_metrics.rmse is None")
+            if data.get('validation_metrics', {}).get('RMSE') is None:
+                issues.append("validation_metrics.RMSE is None")
+            if data.get('RMSE') is None:
+                issues.append("Root RMSE is None")
+            
+            if issues:
+                print("\n⚠️  ISSUES FOUND:")
+                for issue in issues:
+                    print(f"  - {issue}")
+                sys.exit(1)
+            else:
+                print("\n✓ All checks passed!")
+                
+        except FileNotFoundError:
+            print("ERROR: final_run_info.json not found!")
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Invalid JSON: {e}")
+            sys.exit(1)
+        PYTHON_EOF
 
     - name: Run unit tests
       run: |
