@@ -103,11 +103,11 @@ A Continuous Integration and Continuous Deployment (CI/CD) pipeline automates te
 
 ### _Solution deployed:_
 
-Once the solution deployment completes, Cloud Run service of the prediction model will return a public URL like:
+Instructions for solution deployment are offered in the project wiki. The Cloud Run service of the prediction model will return a public URL like:
 
 `https://corn-predictor-service-c4tqdte5jq-uc.a.run.app/predict`
 
-> 🌐 Step 3: Access the Service as indicated [here](https://github.com/bizzaccelerator/corn-yield-prediction/wiki/6_Deployment)
+> 🌐 Step 3: Access the deployment instructions for the packed service as indicated [here](https://github.com/bizzaccelerator/corn-yield-prediction/wiki/6_Deployment)
 
 ## How to reproduce the project.
 
