@@ -88,7 +88,7 @@ Photo: Diagram of the prediction service disposed.
 - Automation & Reliability: Kestra orchestrates end-to-end workflows, reducing manual intervention and ensuring repeatable, reliable execution.
 - Governance & Maintenance: Dedicated GCS storage separates artifacts and reports, supporting strong governance and easier long-term management.
 
-### _Best Practices:_
+### _Best Practices applied:_
 
 This project follows essential software development best practices to ensure code reliability, maintainability, and seamless collaboration throughout the MLOps lifecycle.
 
@@ -101,7 +101,15 @@ Pre-commit hooks automatically check code quality and formatting before changes 
 - __CI/CD Pipeline:__
 A Continuous Integration and Continuous Deployment (CI/CD) pipeline automates testing, building, and deployment processes. This ensures that updates are delivered reliably, with minimal manual intervention, and that the project remains in a deployable state at all times.
 
-## How to run the project.
+### _Solution deployed:_
+
+Once the solution deployment completes, Cloud Run service of the prediction model will return a public URL like:
+
+`https://corn-predictor-service-c4tqdte5jq-uc.a.run.app/predict`
+
+> 🌐 Step 3: Access the Service as indicated [here](https://github.com/bizzaccelerator/corn-yield-prediction/wiki/6_Deployment)
+
+## How to reproduce the project.
 
 Check out the project [wiki](https://github.com/bizzaccelerator/corn-yield-prediction/wiki) for more details about this repository and step-by-step instructions to reproduce the solution.
 
